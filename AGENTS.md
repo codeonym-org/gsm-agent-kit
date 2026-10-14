@@ -11,3 +11,18 @@ the new workspace. Keep local secrets, device data and environments out of commi
 For GitHub changes, releases and issue tracking, read
 [docs/github-workflow.md](docs/github-workflow.md). Repository automation derives
 from `codeonym-oss/acli-py` and is adapted to the monorepo.
+
+## Agent skills
+
+### Issue tracker
+
+Use GitHub Issues. Before ticket operations, read `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Before triage, read the role mapping in `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout. Before exploring domain concepts or decisions, read
+`docs/agents/domain.md`.
