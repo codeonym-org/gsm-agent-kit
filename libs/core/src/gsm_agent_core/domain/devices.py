@@ -1,0 +1,71 @@
+"""Immutable, framework-independent descriptions of cellular devices."""
+
+import re
+from dataclasses import dataclass
+from datetime import datetime
+from enum import StrEnum
+
+
+@dataclass(frozen=True, slots=True)
+class CellularDeviceId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}", self.value):
+            raise ValueError("Device ID must be 1–64 letters, digits, underscores or hyphens")
+
+
+class CapabilityId(StrEnum):
+    DEVICE_STATUS_READ = "device.status.read"
+
+
+class Availability(StrEnum):
+    READY = "ready"
+    BUSY = "busy"
+    UNAVAILABLE = "unavailable"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceModel:
+    manufacturer: str
+    name: str
+
+    def __post_init__(self) -> None:
+        if not self.manufacturer.strip() or not self.name.strip():
+            raise ValueError("Device manufacturer and model must be specified")
+
+
+@dataclass(frozen=True, slots=True)
+class AdapterManifest:
+    adapter_id: str
+    version: str
+    model: DeviceModel
+    capabilities: tuple[CapabilityId, ...]
+
+    def __post_init__(self) -> None:
+        if not self.adapter_id.strip() or not self.version.strip():
+            raise ValueError("Adapter identity and version must be specified")
+        if len(set(self.capabilities)) != len(self.capabilities):
+            raise ValueError("Adapter capabilities must be unique")
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceDescriptor:
+    device_id: CellularDeviceId
+    adapter: AdapterManifest
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceStatus:
+    availability: Availability
+    observed_at: datetime
+    network_provider: str | None = None
+    network_type: str | None = None
+    signal_percent: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.observed_at.utcoffset() is None:
+            raise ValueError("Observation time must include a timezone")
+        if self.signal_percent is not None and not 0 <= self.signal_percent <= 100:
+            raise ValueError("Signal percentage must be between 0 and 100")

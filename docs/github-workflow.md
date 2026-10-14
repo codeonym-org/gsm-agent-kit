@@ -24,11 +24,11 @@ acli-py. Release tags matching `v*` are immutable.
 ## Automation
 
 The workflows, conventions and templates originate from codeonym-oss/acli-py.
-CI is adapted to the 11-package workspace and Python 3.13+, with Linux,
+CI is adapted to the 12-package workspace and Python 3.13+, with Linux,
 macOS and Windows package/import checks. Modem hardware is not required in CI.
 Build checks validate all wheels and source distributions and their metadata.
-The skeleton currently has no behavior tests; this is explicitly reported.
-Behavior tests become mandatory as implementations are added.
+Behavior tests cover the implemented device-inspection slice and run without
+hardware. New implementations must add corresponding behavioral coverage.
 
 Dependabot groups weekly GitHub Actions and uv updates. Issue forms and PR
 templates keep real phone numbers, SMS contents, SIM identifiers and credentials

@@ -15,6 +15,8 @@ gsm-agent-kit/
     core/                       # gsm-agent-core
     gsm-agent/                  # gsm-agent: reusable application workflows
     integrations/
+      devices/
+        simulated/              # gsm-agent-simulated: deterministic development device
       modems/
         zte-http/               # gsm-agent-zte-http
         serial-at/              # gsm-agent-serial-at
@@ -44,8 +46,9 @@ gsm-agent-kit/
   uv.lock                       # development workspace lock
 ```
 
-These directories and Python package scaffolds exist, but adapter/application
-behavior is not implemented. Package-name availability on PyPI is unverified.
+Device inspection now works with the simulated adapter through the server.
+The remaining physical-device and workflow packages are scaffolds.
+Package-name availability on PyPI is unverified.
 
 ## Package conventions
 
@@ -58,9 +61,18 @@ deployment installs the selected application and integrations rather than every
 workspace member. Published libraries have their own version metadata.
 
 `integrations` and its category folders group packages; they are not Python
-distributions. A hardware model is configuration within an adapter when it
-shares a protocol, and a separate integration when its behavior/dependencies
-justify that boundary. Do not make a package or image for every model by default.
+distributions. Every supported cellular device model has its own identified,
+versioned adapter, tested against explicit hardware/firmware/mode variants.
+Adapters may share protocol implementation internally while retaining their
+own settings, dependencies and capability declarations. Build images follow
+those installation and transport requirements; adapter identity is separate
+from image identity.
+
+The existing `modems/zte-http`, `serial-at` and `modemmanager` directories are
+protocol-oriented scaffolds. The next integration-layout revision must provide
+model-specific adapters and a broader cellular-device grouping. They do not
+currently supply generic working adapters for arbitrary models. The tree above
+records the current filesystem, not the final device taxonomy.
 
 `standard-tests` supplies reusable adapter contract tests; it does not contain
 the entire repository test suite. Integrations keep their own unit/protocol tests.
@@ -81,7 +93,15 @@ the application library, and hardware/AI dependencies remain in integrations.
 The exact ownership of individual ports and settings is deliberately deferred
 to the layer discussion.
 
+The [cellular device interface and capability proposal](design/cellular-device-interface.md) starts
+that discussion with typed capability selection, operation outcomes, inbox
+identity, model-specific versioned adapters, and the separation of carrier
+balance policy from device protocols. Cellular device is the general application
+term; a modem is one device category. SMS, voice and multimedia support are
+selected capabilities rather than universal device requirements.
+It is a design proposal, not an implemented or finalized contract.
+
 Deployment image/profile selection follows integration dependencies and transport
-access requirements. Mounting installation media does not expose modem interfaces.
+access requirements. Mounting installation media does not expose device interfaces.
 Frontend packaging uses its own JavaScript tooling if that stack is selected;
 it is not a Python workspace member.
