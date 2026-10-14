@@ -1,0 +1,3 @@
+GitHub workflow conventions, issue/PR templates and scripts/check_branch_name.py
+are adapted from codeonym-oss/acli-py. Its MIT notice is preserved in
+third_party/acli-py-LICENSE. These third-party terms remain applicable to that material.

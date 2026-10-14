@@ -1,0 +1,7 @@
+# gsm-agent-serial-at
+
+Serial AT modem integration.
+
+Scaffold only: no device access or application behavior is implemented yet.
+
+Python import: `gsm_agent_serial_at`.

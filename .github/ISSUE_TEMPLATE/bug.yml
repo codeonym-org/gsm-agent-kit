@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in gsm-agent-kit doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is public. Leave out API tokens, and replace real names, emails,
+        account ids, project keys and issue titles with made-up ones.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Command
+      description: The `gsm-agent-kit` command you ran, with its options.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output or traceback
+      description: Include redacted logs; remove phone numbers, SMS contents, SIM identifiers and API keys.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: gsm-agent-kit version
+      placeholder: package version or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and Python version
+      placeholder: Windows 11, Python 3.12.4
+    validations:
+      required: true

@@ -1,0 +1,20 @@
+[project]
+name = "gsm-agent-zte-http"
+version = "0.1.0"
+description = "ZTE HTTP modem integration."
+readme = "README.md"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+requires-python = ">=3.13"
+dependencies = ['gsm-agent-core', 'gsm-agent']
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gsm_agent_zte_http"]
+
+[tool.uv.sources]
+gsm-agent-core = { workspace = true }
+gsm-agent = { workspace = true }

@@ -1,0 +1,26 @@
+name: build
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv build --all-packages --out-dir dist
+      - run: uvx twine check --strict dist/*
+      - name: Smoke-test wheels and source distributions
+        run: |
+          uv venv /tmp/gsm-smoke --python 3.13
+          uv pip install --python /tmp/gsm-smoke --no-index dist/*.whl
+          /tmp/gsm-smoke/bin/python -c 'import gsm_agent_core, gsm_agent, gsm_agent_kit, gsm_agent_server, gsm_agent_cli, gsm_agent_zte_http, gsm_agent_serial_at, gsm_agent_modemmanager, gsm_agent_langchain, gsm_agent_sqlite, gsm_agent_standard_tests'
+          uv pip install --python /tmp/gsm-smoke hatchling
+          uv pip install --python /tmp/gsm-smoke --no-deps --no-build-isolation --force-reinstall dist/*.tar.gz
+          /tmp/gsm-smoke/bin/python -c 'import gsm_agent_core, gsm_agent, gsm_agent_kit, gsm_agent_server, gsm_agent_cli, gsm_agent_zte_http, gsm_agent_serial_at, gsm_agent_modemmanager, gsm_agent_langchain, gsm_agent_sqlite, gsm_agent_standard_tests'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
