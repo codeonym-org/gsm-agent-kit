@@ -51,8 +51,9 @@ Device inspection works with the simulated and ZTE MF833T adapters through the
 server. The MF833T also implements incoming SMS scans; application ingestion,
 SQLite persistence, source baselines and inbox queries are implemented.
 Outgoing SMS has typed constraints, bounded plain-text preparation, durable
-intent/attempt tracking and manual API submission. Other physical-device
-integrations and AI workflows remain queued.
+intent/attempt tracking and manual API submission. OpenRouter replies connect
+incoming events to a durable reply queue and bounded SQLite conversation history
+through a framework-independent AI port. Other physical-device integrations remain queued.
 Package-name availability on PyPI is unverified.
 
 ## Package conventions

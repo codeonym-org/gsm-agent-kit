@@ -7,6 +7,8 @@ from gsm_agent.application.inbox import InboxRecord, IngestResult
 
 
 class InboxStore(Protocol):
+    async def get(self, record_id: str) -> InboxRecord | None: ...
+
     async def ingest(self, snapshot: InboxSnapshot) -> IngestResult:
         """Atomically store observations, source baseline and outgoing events."""
         ...

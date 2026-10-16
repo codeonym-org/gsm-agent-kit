@@ -35,6 +35,20 @@ accepted parts stay accepted and pending parts stay pending. Unknown attempts
 block new requests for the same device until separately reconciled. There is no
 automatic resend, force retry or delivery inference. Keep this ledger across
 restarts; the server defaults to a separate submissions database.
-AI memory remains future work.
+
+`SqliteReplyStore` implements `ReplyStore`: one durable job per incoming record,
+a stable submission request UUID, persisted decisions, and conversation exchanges.
+Duplicate events cannot enqueue a second job. Startup marks interrupted generation
+failed; submitting jobs remain available for read-only reconciliation. Job
+completion and evidence-backed history commit atomically. No method calls a
+model or cellular device.
+
+History is scoped by source/subscription and normalized correspondent. Age,
+message-count and character limits delete oldest whole exchanges on startup,
+history reads and completion. User input is capped; assistant text consists only
+of accepted submission parts. Terminal job text is cleared on completion or aged
+out; minimal job identities/states remain as deduplication tombstones. Retention
+does not delete the separate inbox/submission audit ledgers. Keep all three
+databases consistent and persist them across restarts; one runtime owner only.
 
 Python import: `gsm_agent_sqlite`.

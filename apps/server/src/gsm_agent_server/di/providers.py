@@ -4,19 +4,78 @@ from dishka import Provider, Scope, provide
 from gsm_agent.application.inbox import InboxDisabledError, InboxPolicy, IngestionCoordinator
 from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.ports.inbox import InboxStore
+from gsm_agent.application.ports.replies import ReplyStore
 from gsm_agent.application.ports.submissions import SubmissionStore
 from gsm_agent.application.queries.devices import DeviceQueryPolicy
+from gsm_agent.application.replies import ReplyCoordinator, ReplyPolicy
 from gsm_agent.application.submissions import SubmissionCoordinator, SubmissionDisabledError, SubmissionPolicy
 from gsm_agent.application.text import SmsLimits
+from gsm_agent_core.ai import AIAgent
 from gsm_agent_core.domain.devices import CellularDeviceId
 from gsm_agent_core.ports import CellularDevice
 
 from gsm_agent_server.infra.devices import ConfiguredDevices
+from gsm_agent_server.infra.replies import DisabledAgent, DisabledReplyStore
 from gsm_agent_server.runtime.settings import DeviceSettings, Settings
 
 
 class DeviceProvider(Provider):
     scope = Scope.APP
+
+    @provide
+    def reply_policy(self, settings: Settings) -> ReplyPolicy:
+        config = settings.assistant
+        return ReplyPolicy(
+            enabled=config.enabled,
+            dry_run=config.dry_run,
+            default_region=config.default_region,
+            timeout_seconds=config.timeout_seconds,
+            history_max_messages=config.history_max_messages,
+            history_max_chars=config.history_max_chars,
+            history_retention_days=config.history_retention_days,
+            input_max_chars=config.input_max_chars,
+        )
+
+    @provide
+    def reply_coordinator(self) -> ReplyCoordinator:
+        return ReplyCoordinator()
+
+    @provide
+    async def reply_store(self, settings: Settings, policy: ReplyPolicy) -> AsyncIterator[ReplyStore]:
+        if not settings.assistant.enabled:
+            yield DisabledReplyStore()
+            return
+        try:
+            from gsm_agent_sqlite import SqliteReplyStore
+        except ImportError as exc:
+            raise RuntimeError("Install gsm-agent-server[ai] for persistent auto-replies") from exc
+        store = await SqliteReplyStore.open(settings.assistant.database_path)
+        try:
+            await store.prune(policy)
+            yield store
+        finally:
+            await store.close()
+
+    @provide
+    def ai_agent(self, settings: Settings) -> AIAgent:
+        config = settings.assistant
+        if not config.enabled:
+            return DisabledAgent()
+        if config.api_key is None:
+            raise RuntimeError("Set GSM_ASSISTANT__API_KEY to enable the OpenRouter assistant")
+        try:
+            from gsm_agent_langchain import LangChainAgent
+        except ImportError as exc:
+            raise RuntimeError("Install gsm-agent-server[ai] for the OpenRouter assistant") from exc
+        return LangChainAgent(
+            model=config.model,
+            api_key=config.api_key.get_secret_value(),
+            instructions=config.instructions,
+            max_output_tokens=config.max_output_tokens,
+            max_total_chars=settings.submissions.max_total_chars,
+            max_parts=settings.submissions.max_parts,
+            timeout_seconds=config.timeout_seconds,
+        )
 
     @provide
     def submission_policy(self, settings: Settings) -> SubmissionPolicy:

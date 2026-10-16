@@ -5,7 +5,8 @@ implemented with simulated and model-specific ZTE MF833T adapters.
 The MF833T adapter records variant-specific verification evidence. Incoming SMS
 snapshots, durable ingestion, source baselines and stored-message queries are also
 implemented. Typed SMS submission, durable attempts/progress and bounded plain-text
-preparation are implemented too. AI and USSD remain proposed contracts for subsequent slices.
+preparation are implemented too. Structured OpenRouter replies and bounded persistent
+conversations are implemented. USSD remains a proposed contract for a subsequent slice.
 `.v0` supplies reference behavior, not the new public contracts.
 
 Domain terms follow the root [glossary](../../GLOSSARY.md). The glossary defines
@@ -335,11 +336,23 @@ The archive contains terminology that must not be carried forward unchanged:
   The proposed interface returns busy for an existing session it cannot prove
   it owns; explicit recovery is a separate operation.
 
-Conversation identity remains a later application-layer decision. The archive
-groups history by sender phone number alone. With multiple SIMs or assistants,
-that can combine exchanges from different local identities. The model must
-decide which exchanges share a conversation before adopting a universal thread
-key; this proposal does not silently change the user's existing memory policy.
+Conversation identity is now application-owned: a digest of inbox source,
+subscription generation and normalized international correspondent. The source
+includes logical device, storage location and storage generation. A different
+device, SIM generation or storage replacement therefore starts separate history.
+National numbers require an explicitly configured country region; named senders
+and short codes are ineligible for automatic replies. The digest is an opaque
+thread ID, not anonymization of the local message data.
+
+The core `AIAgent` port accepts plain conversation messages and returns a
+structured reply-or-ignore decision through `invoke` or `stream`. The LangChain
+adapter uses `create_agent` and ChatOpenRouter; no framework history/checkpointer
+owns conversation state. The application queues one durable job per incoming
+record and persists prepared decisions before submission. Model errors do not
+retry automatically. Interrupted submission is reconciled through read-only
+ledger queries, never a blind resend. History records only accepted reply parts,
+without delivery claims, and applies configured age/message/character retention.
+Dry-run previews are terminal and do not become accepted assistant history.
 
 ## Contract verification
 

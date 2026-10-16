@@ -31,7 +31,8 @@ core contracts, Mediary query handlers, Dishka composition, a simulated adapter
 and the model-specific ZTE MF833T HTTP adapter.
 Incoming SMS ingestion is implemented with source baselines, a SQLite ledger
 and durable events. Outgoing SMS submission has durable intent, per-part attempts
-and bounded plain-text preparation. AI replies, remaining integrations and browser UI are being built as
+and bounded plain-text preparation. OpenRouter replies use a durable queue and
+bounded persistent conversations. Remaining integrations and browser UI are being built as
 [implementation tickets](https://github.com/orgs/codeonym-org/projects/2).
 Each package owns its dependencies, README, source namespace, typing marker and tests.
 
@@ -65,7 +66,7 @@ GSM_DEVICE__ADAPTER=zte-mf833t GSM_DEVICE__ID=zte-device GSM_INBOX__ENABLED=true
 
 Read `/api/devices/zte-device/messages`. The first scan records the existing
 inbox as backlog; later complete messages become eligible for processing.
-The application does not send replies yet. See the server README for storage
+Auto-reply is disabled by default. See the server README for storage
 and subscription generation settings before replacing a SIM or device.
 
 For manual SMS submission, add `--extra sms` and set
@@ -73,6 +74,11 @@ For manual SMS submission, add `--extra sms` and set
 accepts a client-generated UUID, international destination and text; a matching
 GET returns durable progress. See the server README for the request format and
 retry semantics. Sending has protocol-fixture coverage; live SMS verification is pending.
+
+For OpenRouter replies, add `--extra ai`, enable `GSM_ASSISTANT__ENABLED=true`
+and configure `GSM_ASSISTANT__API_KEY` in your local environment. The assistant
+starts in dry-run mode. See the [assistant setup](apps/server/README.md#sms-assistant)
+for live sending, conversation retention, budgets and operator status.
 
 ## Develop
 
@@ -89,10 +95,11 @@ membership, linting and test discovery. Select a package when working on it,
 for example `uv run --package gsm-agent-core python`.
 
 The `gsm-agent-kit` package declares installation extras: `server`, `cli`,
-`zte-mf833t`, `inbox`, `sms`, `zte-http`, `serial-at`, `modemmanager`, `langchain`, and `sqlite`.
+`zte-mf833t`, `inbox`, `sms`, `ai`, `zte-http`, `serial-at`, `modemmanager`, `langchain`, and `sqlite`.
 `zte-mf833t` installs the server and model-specific adapter. The server also
-offers separate `simulated`, `inbox` and `sms` extras. `inbox` and `sms` install the
-SQLite integration; combine them with a device profile. Other device and AI extras still select scaffold packages.
+offers separate `simulated`, `inbox`, `sms` and `ai` extras. `inbox` and `sms` install the
+SQLite integration; `ai` adds SQLite and LangChain/OpenRouter. Combine them with a device profile.
+Other device integrations still select scaffold packages.
 No packages or images have been published.
 
 See [the proposed monorepo layout](docs/monorepo-layout.md) for the planned

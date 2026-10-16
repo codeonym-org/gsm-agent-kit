@@ -24,4 +24,10 @@ validates GSM7/UCS2 units without any provider encoding names or delivery claims
 This package depends only on the Python standard library. API, DI, CQRS, AI
 and device libraries belong to consumers or integrations.
 
+`AIAgent.invoke` returns a structured `ReplyDecision`; `stream` yields validated
+complete decisions. `AgentInput` carries an opaque thread ID and plain
+`ChatMessage` values. Ignore decisions require spam or automated-notification
+reasons; replies require nonempty text. Framework messages, provider clients,
+credentials and conversation persistence stay outside the port.
+
 Python import: `gsm_agent_core`.

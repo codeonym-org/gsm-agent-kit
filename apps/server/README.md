@@ -2,7 +2,8 @@
 
 API transport, dependency injection and runtime composition.
 
-The server exposes device inspection, optional durable SMS ingestion and manual submission. Its hexagonal path is
+The server exposes device inspection, optional durable SMS ingestion/submission
+and OpenRouter replies with persistent conversations. Its hexagonal path is
 API routes → Mediary queries → application ports → cellular-device adapters.
 Dishka owns application and request scopes. Startup composes the selected
 adapter eagerly; shutdown closes its resources, including after startup failure.
@@ -212,5 +213,92 @@ firmware completion after its initial HTTP acknowledgement. Sending is covered
 by fake HTTP and SQLite/API tests; no live test SMS has been sent for this slice.
 Its new sending capability therefore has fixture evidence only, and overall
 variant compatibility is `untested` until all declared capabilities have device verification.
+
+## SMS assistant
+
+Install the assistant profile and start in dry-run mode:
+
+```bash
+GSM_DEVICE__ADAPTER=zte-mf833t GSM_DEVICE__ID=zte-device \
+  GSM_INBOX__ENABLED=true GSM_ASSISTANT__ENABLED=true \
+  uv run --package gsm-agent-server --extra zte-mf833t --extra inbox --extra ai gsm-agent-server
+```
+
+Set `GSM_ASSISTANT__API_KEY` in your local `.env` or environment before running.
+It must be an OpenRouter key. Set `GSM_ASSISTANT__MODEL` to your selected
+tool-calling model; the default is `openai/gpt-4.1-mini` through OpenRouter.
+The archived `.v0` settings are not read automatically. The example
+[environment file](../../examples/sms-assistant/.env.example) contains all settings.
+Standalone installation: `gsm-agent-kit[zte-mf833t,inbox,sms,ai]`.
+
+Dry-run calls the configured model and prepares a bounded preview in local
+workflow storage, without submitting SMS. To send replies, add `--extra sms`,
+set `GSM_SUBMISSIONS__ENABLED=true` and `GSM_ASSISTANT__DRY_RUN=false`, then restart.
+The same SMS budgets and encoding rules apply to manual and generated replies.
+No credentials or paid calls are needed to run tests.
+
+Operator queries, protected by `GSM_API_TOKEN` when configured:
+
+- `GET /api/devices/zte-device/assistant`: auto-reply/dry-run flags and job counts.
+- `GET /api/devices/zte-device/assistant/jobs?limit=50&offset=0`: newest jobs with
+  incoming record ID, submission request UUID, state, issue code and time.
+- `GET /api/devices/zte-device/submissions/{request_id}`: exact submitted parts
+  and acceptance evidence. Dry-run/ignored jobs have no submission record.
+
+Jobs move through queued, generating, prepared and submitting to completed,
+ignored, dry_run, failed or interrupted. Completed means every part was accepted
+for submission; delivery is not established. Failures are visible in job state,
+without provider payloads, SMS text, phone numbers or secrets in default logs.
+Status/job queries perform no device or model I/O. Default logs omit message
+content; external framework tracing, if explicitly enabled, has its own data policy.
+
+Incoming events commit a deduplicated job before acknowledgement. A separate
+worker generates replies, so the model's deadline cannot block an inbox scan.
+Fresh complete messages after the initial baseline are eligible. Messages
+ingested while auto-reply is disabled are not replayed when it is enabled.
+Prepared jobs resume after restart. Interrupted model generation becomes failed;
+provider errors are not automatically retried. A submitting job is reconciled
+from the submission ledger without resending. An uncertain or incomplete reply
+becomes interrupted; this first slice has no force-retry endpoint.
+Dry-run/ignored/failed jobs remain terminal if configuration changes later.
+
+Conversation identity combines logical device, storage generation, subscription
+generation and normalized international correspondent. `00` and international
+phone formats normalize to E.164. National numbers require an explicit
+`DEFAULT_REGION` (for example `MA`); named senders, short codes and unsupported
+addresses do not trigger model calls or replies. Update device generation
+settings when changing SIM/storage as described above. Attribution is checked
+again after model generation, before submission.
+
+History persists in a third database. It includes capped user input and exact
+reply parts backed by acceptance evidence, including only accepted parts of an
+interrupted multi-part reply. Dry-run previews and ignored outputs do not enter
+conversation history. Retention deletes oldest whole exchanges at startup and
+on history read/completion, by age, message count and character count. An exchange
+larger than the budget is omitted. The current input has a separate character cap.
+Minimal job tombstones remain for deduplication, and inbox/submission audit
+ledgers have independent retention. Persist all databases and run one worker
+process per device/ledger; there is no distributed lease.
+
+The agent has no live browsing/news tools. Its prompt requires an honest
+limitation response to such questions and plain text for every human answer.
+Model output is still checked by application SMS normalization and caps.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `GSM_ASSISTANT__ENABLED` | `false` | Queue and process replies to fresh incoming events |
+| `GSM_ASSISTANT__DRY_RUN` | `true` | Generate/prepare previews without SMS submission |
+| `GSM_ASSISTANT__DATABASE_PATH` | `data/conversations.sqlite3` | Durable jobs and bounded conversation history |
+| `GSM_ASSISTANT__API_KEY` | unset | OpenRouter key; required when enabled |
+| `GSM_ASSISTANT__MODEL` | `openai/gpt-4.1-mini` | OpenRouter model ID supporting tool calling |
+| `GSM_ASSISTANT__INSTRUCTIONS` | general SMS assistant | Configurable instructions plus fixed SMS constraints |
+| `GSM_ASSISTANT__MAX_OUTPUT_TOKENS` | `384` | Model output cap, including structured-output overhead |
+| `GSM_ASSISTANT__TIMEOUT_SECONDS` | `60` | Whole model invocation deadline |
+| `GSM_ASSISTANT__POLL_INTERVAL_SECONDS` | `2` | Delay between processing one reply job and the next |
+| `GSM_ASSISTANT__DEFAULT_REGION` | unset | Explicit ISO country code for national sender numbers |
+| `GSM_ASSISTANT__HISTORY_MAX_MESSAGES` | `20` | Retained user and assistant messages per conversation |
+| `GSM_ASSISTANT__HISTORY_MAX_CHARS` | `6000` | Retained text characters per conversation |
+| `GSM_ASSISTANT__HISTORY_RETENTION_DAYS` | `30` | Maximum age of retained exchanges |
+| `GSM_ASSISTANT__INPUT_MAX_CHARS` | `2000` | Maximum current user input sent to the model |
 
 Python import: `gsm_agent_server`.

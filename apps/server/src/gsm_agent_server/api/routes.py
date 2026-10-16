@@ -9,7 +9,9 @@ from gsm_agent.application.commands.ingest_inbox import IngestInbox
 from gsm_agent.application.commands.send_sms import SendSms
 from gsm_agent.application.queries.devices import GetDevice, GetDeviceStatus, ListAdapters, ListDevices
 from gsm_agent.application.queries.inbox import ListStoredMessages
+from gsm_agent.application.queries.replies import AssistantStatus, GetAssistantStatus, ListReplyJobs
 from gsm_agent.application.queries.submissions import GetSubmission
+from gsm_agent.application.replies import ReplyJobStatus
 from gsm_agent_core.domain.devices import CellularDeviceId
 from gsm_agent_core.domain.submission import SmsDestination
 from mediary.cqrs import CommandSender, QuerySender
@@ -126,3 +128,18 @@ async def submission(
     return SubmissionResponse.from_domain(
         await queries.send(GetSubmission(CellularDeviceId(device_id), request_id))
     )
+
+
+@router.get("/devices/{device_id}/assistant", responses={404: {"model": ErrorResponse}})
+async def assistant_status(device_id: DeviceIdPath, queries: FromDishka[QuerySender]) -> AssistantStatus:
+    return await queries.send(GetAssistantStatus(CellularDeviceId(device_id)))
+
+
+@router.get("/devices/{device_id}/assistant/jobs", responses={404: {"model": ErrorResponse}})
+async def reply_jobs(
+    device_id: DeviceIdPath,
+    queries: FromDishka[QuerySender],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> tuple[ReplyJobStatus, ...]:
+    return await queries.send(ListReplyJobs(CellularDeviceId(device_id), limit, offset))
