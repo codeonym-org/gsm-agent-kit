@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 
 from dishka import Provider
 from dishka.integrations.fastapi import setup_dishka
@@ -14,6 +14,7 @@ from gsm_agent.application.errors import (
 from gsm_agent.application.inbox import InboxDeadlineError, InboxDisabledError
 from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.ports.inbox import InboxStore
+from gsm_agent.application.ports.replies import ReplyStore
 from gsm_agent.application.ports.submissions import SubmissionStore
 from gsm_agent.application.submissions import (
     InvalidSmsError,
@@ -22,12 +23,14 @@ from gsm_agent.application.submissions import (
     SubmissionDisabledError,
     SubmissionNotFoundError,
 )
+from gsm_agent_core.ai import AIAgent
 from gsm_agent_core.domain.devices import DeviceReadIssue
 from gsm_agent_core.domain.sms import InboxReadError
 
 from gsm_agent_server.api.routes import router
 from gsm_agent_server.di.container import build_container
 from gsm_agent_server.runtime.inbox import poll_inboxes
+from gsm_agent_server.runtime.replies import process_replies
 from gsm_agent_server.runtime.settings import Settings
 
 
@@ -38,6 +41,7 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         polling: asyncio.Task[None] | None = None
+        replying: asyncio.Task[None] | None = None
         try:
             # Compose eagerly: invalid selections fail startup, not the first request.
             await container.get(DeviceDirectory)
@@ -45,14 +49,21 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
                 await container.get(SubmissionStore)
             if config.inbox.enabled:
                 await container.get(InboxStore)
+            if config.assistant.enabled:
+                await container.get(ReplyStore)
+                await container.get(AIAgent)
+                replying = asyncio.create_task(
+                    process_replies(container, config.assistant), name="sms-replies"
+                )
+            if config.inbox.enabled:
                 polling = asyncio.create_task(poll_inboxes(container, config.inbox), name="inbox-polling")
             yield
         finally:
             try:
-                if polling is not None:
-                    polling.cancel()
-                    with suppress(asyncio.CancelledError):
-                        await polling
+                tasks = [task for task in (polling, replying) if task is not None]
+                for task in tasks:
+                    task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
             finally:
                 await container.close()
 

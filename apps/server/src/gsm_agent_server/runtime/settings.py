@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 
 from gsm_agent_core.domain.devices import Availability
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,23 @@ class DeviceSettings(BaseModel):
     zte_mf833t: ZteHttpSettings = Field(default_factory=ZteHttpSettings)
 
 
+class AssistantSettings(BaseModel):
+    enabled: bool = False
+    dry_run: bool = True
+    database_path: Path = Path("data/conversations.sqlite3")
+    model: str = Field(default="openai/gpt-4.1-mini", min_length=1)
+    api_key: SecretStr | None = Field(default=None, min_length=1)
+    instructions: str = "You are a helpful general SMS assistant. Reply in the sender's language."
+    max_output_tokens: int = Field(default=384, ge=64, le=4096)
+    timeout_seconds: float = Field(default=60, gt=0, le=300, allow_inf_nan=False)
+    poll_interval_seconds: float = Field(default=2, gt=0, le=60, allow_inf_nan=False)
+    default_region: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")
+    history_max_messages: int = Field(default=20, ge=2, le=200)
+    history_max_chars: int = Field(default=6000, ge=256, le=100000)
+    history_retention_days: int = Field(default=30, ge=1, le=365)
+    input_max_chars: int = Field(default=2000, ge=16, le=10000)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="GSM_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -48,5 +65,15 @@ class Settings(BaseSettings):
     device: DeviceSettings = Field(default_factory=DeviceSettings)
     inbox: InboxSettings = Field(default_factory=InboxSettings)
     submissions: SubmissionSettings = Field(default_factory=SubmissionSettings)
+    assistant: AssistantSettings = Field(default_factory=AssistantSettings)
     query_timeout_seconds: float = Field(default=5, gt=0, le=30, allow_inf_nan=False)
     api_token: SecretStr | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def assistant_dependencies(self) -> "Settings":
+        if self.assistant.enabled:
+            if not self.inbox.enabled:
+                raise ValueError("Auto-reply requires inbox ingestion")
+            if not self.assistant.dry_run and not self.submissions.enabled:
+                raise ValueError("Live auto-reply requires SMS submission")
+        return self

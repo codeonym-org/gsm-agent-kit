@@ -30,6 +30,21 @@ UUID preserves its plan and accepted progress; conflicts return an explicit
 error. Known-not-submitted parts can resume on an explicit replay. Unknown or
 rejected parts stop; cancellation and interrupted attempts remain unknown.
 No accepted part is automatically resubmitted. Acceptance is not delivery.
-AI orchestration follows in a separate ticket.
+
+`SmsReceived` queues a durable, record-deduplicated reply when auto-reply is
+enabled. `ProcessNextReply` is a command that generates a structured decision
+through the core `AIAgent` port and delegates live sending to `SendSms`.
+Model generation runs outside the ingestion deadline. A prepared decision
+survives restart; interrupted generation is failed, and interrupted submission
+is reconciled by reading its ledger, without sending again. There is no
+automatic provider retry or SMS retry.
+
+Conversation keys combine inbox source, subscription generation and normalized
+international correspondent. National addresses require an explicit country
+region; named senders and short codes are skipped. History contains bounded
+user input and only the exact accepted reply parts; dry-run and ignored outputs
+never become assistant history. The existing preparation policy owns output
+normalization, splitting and limits for both live sending and dry-run previews.
+`GetAssistantStatus` and `ListReplyJobs` are queries over local workflow state.
 
 Python import: `gsm_agent`.

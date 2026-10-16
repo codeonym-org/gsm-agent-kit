@@ -32,6 +32,10 @@ inbox = [
 sms = [
     "gsm-agent-sqlite",
 ]
+ai = [
+    "gsm-agent-langchain",
+    "gsm-agent-sqlite",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -45,4 +49,5 @@ gsm-agent = { workspace = true }
 gsm-agent-simulated = { workspace = true }
 gsm-agent-core = { workspace = true }
 gsm-agent-zte-mf833t = { workspace = true }
+gsm-agent-langchain = { workspace = true }
 gsm-agent-sqlite = { workspace = true }

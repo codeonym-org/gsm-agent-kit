@@ -7,6 +7,7 @@ import pytest
 from dishka import Provider, Scope, provide
 from fastapi.testclient import TestClient
 from gsm_agent.application.commands.ingest_inbox import IngestInbox
+from gsm_agent.application.commands.process_reply import ProcessNextReply
 from gsm_agent.application.commands.send_sms import SendSms
 from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.queries.devices import GetDeviceStatus, ListAdapters, ListDevices
@@ -170,7 +171,7 @@ async def test_mediary_dispatches_only_query_contracts_with_typed_results() -> N
             queries = await scope.get(QuerySender)
             mediator = await scope.get(Mediator)
             for item in mediator.registrations().handlers:
-                if item.message_type in (IngestInbox, SendSms):
+                if item.message_type in (IngestInbox, SendSms, ProcessNextReply):
                     assert not issubclass(item.message_type, Query)
                 else:
                     assert issubclass(item.message_type, Query)

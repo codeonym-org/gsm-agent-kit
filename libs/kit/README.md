@@ -16,7 +16,12 @@ The `sms` extra selects durable manual submission support. Combine it with a
 device extra (`gsm-agent-kit[zte-mf833t,sms]`) and enable
 `GSM_SUBMISSIONS__ENABLED=true`. It adds no AI or other device integration.
 
-Other hardware/AI extras still select scaffolds. Packages are not yet
+The `ai` extra selects the server's LangChain/OpenRouter and SQLite support.
+`gsm-agent-kit[zte-mf833t,inbox,sms,ai]` selects the full SMS assistant profile;
+configuration still controls ingestion, sending, auto-reply and dry-run separately.
+The `langchain` extra installs the agent integration without the server.
+
+Other hardware extras still select scaffolds. Packages are not yet
 published; the extras can be exercised using workspace or built distributions.
 
 Python import: `gsm_agent_kit`.

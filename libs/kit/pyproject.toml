@@ -42,3 +42,6 @@ inbox = [
 sms = [
     "gsm-agent-server[sms]",
 ]
+ai = [
+    "gsm-agent-server[ai]",
+]

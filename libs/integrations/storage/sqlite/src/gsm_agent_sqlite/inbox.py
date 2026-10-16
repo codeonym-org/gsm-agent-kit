@@ -61,6 +61,11 @@ class SqliteInboxStore:
         async with self._lock:
             await self._connection.close()
 
+    async def get(self, record_id: str) -> InboxRecord | None:
+        async with self._lock:
+            row = await self._one("SELECT * FROM inbox_records WHERE id=?", (record_id,))
+            return self._record(row) if row is not None else None
+
     async def _one(self, sql: str, parameters: tuple = ()) -> aiosqlite.Row | None:
         async with self._connection.execute(sql, parameters) as cursor:
             return await cursor.fetchone()
