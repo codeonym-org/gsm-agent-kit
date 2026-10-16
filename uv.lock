@@ -17,6 +17,7 @@ members = [
     "gsm-agent-sqlite",
     "gsm-agent-standard-tests",
     "gsm-agent-zte-http",
+    "gsm-agent-zte-mf833t",
 ]
 
 [[package]]
@@ -332,6 +333,9 @@ sqlite = [
 zte-http = [
     { name = "gsm-agent-zte-http" },
 ]
+zte-mf833t = [
+    { name = "gsm-agent-server", extra = ["zte-mf833t"] },
+]
 
 [package.metadata]
 requires-dist = [
@@ -341,10 +345,11 @@ requires-dist = [
     { name = "gsm-agent-modemmanager", marker = "extra == 'modemmanager'", editable = "libs/integrations/modems/modemmanager" },
     { name = "gsm-agent-serial-at", marker = "extra == 'serial-at'", editable = "libs/integrations/modems/serial-at" },
     { name = "gsm-agent-server", marker = "extra == 'server'", editable = "apps/server" },
+    { name = "gsm-agent-server", extras = ["zte-mf833t"], marker = "extra == 'zte-mf833t'", editable = "apps/server" },
     { name = "gsm-agent-sqlite", marker = "extra == 'sqlite'", editable = "libs/integrations/storage/sqlite" },
     { name = "gsm-agent-zte-http", marker = "extra == 'zte-http'", editable = "libs/integrations/modems/zte-http" },
 ]
-provides-extras = ["server", "cli", "zte-http", "serial-at", "modemmanager", "langchain", "sqlite"]
+provides-extras = ["server", "cli", "zte-http", "serial-at", "modemmanager", "langchain", "sqlite", "zte-mf833t"]
 
 [[package]]
 name = "gsm-agent-kit-workspace"
@@ -438,6 +443,9 @@ dependencies = [
 simulated = [
     { name = "gsm-agent-simulated" },
 ]
+zte-mf833t = [
+    { name = "gsm-agent-zte-mf833t" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -446,11 +454,12 @@ requires-dist = [
     { name = "gsm-agent", editable = "libs/gsm-agent" },
     { name = "gsm-agent-core", editable = "libs/core" },
     { name = "gsm-agent-simulated", marker = "extra == 'simulated'", editable = "libs/integrations/devices/simulated" },
+    { name = "gsm-agent-zte-mf833t", marker = "extra == 'zte-mf833t'", editable = "libs/integrations/devices/zte-mf833t" },
     { name = "mediary", extras = ["dishka", "fastapi", "otel"], specifier = ">=0.4.0" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
-provides-extras = ["simulated"]
+provides-extras = ["simulated", "zte-mf833t"]
 
 [[package]]
 name = "gsm-agent-simulated"
@@ -506,6 +515,21 @@ dependencies = [
 requires-dist = [
     { name = "gsm-agent", editable = "libs/gsm-agent" },
     { name = "gsm-agent-core", editable = "libs/core" },
+]
+
+[[package]]
+name = "gsm-agent-zte-mf833t"
+version = "0.1.0"
+source = { editable = "libs/integrations/devices/zte-mf833t" }
+dependencies = [
+    { name = "gsm-agent-core" },
+    { name = "httpx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "gsm-agent-core", editable = "libs/core" },
+    { name = "httpx", specifier = ">=0.28.1" },
 ]
 
 [[package]]

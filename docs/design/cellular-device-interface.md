@@ -1,7 +1,8 @@
 # Cellular device interface and capabilities
 
-Status: design proposal. Device inspection, a typed status capability and a
-simulated adapter are now implemented. SMS, USSD, compatibility verification and
+Status: design proposal. Device inspection and a typed status capability are
+implemented with simulated and model-specific ZTE MF833T adapters.
+The MF833T adapter records variant-specific verification evidence. SMS, USSD and
 durable workflows below remain proposed contracts for subsequent slices.
 `.v0` supplies reference behavior, not the new public contracts.
 

@@ -91,7 +91,7 @@ def test_api_exposes_device_identity_adapter_version_and_only_implemented_capabi
         assert adapter["version"] == MANIFEST.version
         assert adapter["capabilities"] == ["device.status.read"]
         listing = client.get("/api/devices").json()
-        assert listing == [{"device_id": "demo-device", "adapter": adapter}]
+        assert listing == [{"device_id": "demo-device", "adapter": adapter, "observation": None}]
         assert client.get("/api/devices/demo-device").json() == listing[0]
         status = client.get("/api/devices/demo-device/status")
         assert status.status_code == 200
