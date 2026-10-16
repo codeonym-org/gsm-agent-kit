@@ -32,6 +32,12 @@ ingestion/submission, balance session ownership and persistent AI replies with t
 fixture chat models and no paid API calls or hardware. New implementations
 must add corresponding behavioral coverage.
 
+The `web` CI job installs the pinned pnpm workspace, checks generated OpenAPI
+types for drift, lints/type-checks/builds the console, and runs Playwright against
+the real backend with simulated device and AI ports. It is required by `ci-ok`.
+Browser traces/screenshots are uploaded only on failure using synthetic fixture
+data. Dependabot's npm ecosystem entry manages `pnpm-lock.yaml`.
+
 Dependabot groups weekly GitHub Actions and uv updates. Issue forms and PR
 templates keep real phone numbers, SMS contents, SIM identifiers and credentials
 out of public reports. Secret scanning and push protection are enabled where
