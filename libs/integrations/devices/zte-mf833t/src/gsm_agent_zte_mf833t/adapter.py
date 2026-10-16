@@ -8,6 +8,7 @@ from importlib.metadata import version
 import httpx
 from gsm_agent_core.capabilities.catalog import (
     DEVICE_STATUS_READ,
+    SMS_INBOX_READ,
     CapabilityBinding,
     CapabilityKey,
     CapabilitySet,
@@ -26,7 +27,9 @@ from gsm_agent_core.domain.devices import (
     DeviceVariant,
     VerificationKind,
 )
+from gsm_agent_core.domain.sms import InboxItem, InboxReadError, InboxSnapshot, InboxSource
 
+from gsm_agent_zte_mf833t.inbox import parse_item
 from gsm_agent_zte_mf833t.settings import ZteMf833tSettings
 
 REFERENCE_VARIANT = DeviceVariant("BD_WANAMARMF833TV1.0.0B04", "djtA", "http-management")
@@ -34,15 +37,21 @@ MANIFEST = AdapterManifest(
     adapter_id="zte-mf833t",
     version=version("gsm-agent-zte-mf833t"),
     model=DeviceModel("ZTE", "MF833T"),
-    capabilities=(DEVICE_STATUS_READ.id,),
+    capabilities=(DEVICE_STATUS_READ.id, SMS_INBOX_READ.id),
     required_transports=("http-management",),
     runtime_dependencies=("httpx>=0.28.1",),
     compatibility_evidence=(
         CompatibilityEvidence(
             REFERENCE_VARIANT,
             VerificationKind.DEVICE_VERIFICATION,
-            "Read-only MF833T HTTP inspection verified 2026-10-16; see adapter README verification notes",
-            capabilities=(DEVICE_STATUS_READ.id,),
+            "Read-only MF833T status and paginated inbox verified 2026-10-16; see adapter README",
+            capabilities=(DEVICE_STATUS_READ.id, SMS_INBOX_READ.id),
+        ),
+        CompatibilityEvidence(
+            REFERENCE_VARIANT,
+            VerificationKind.PROTOCOL_FIXTURE,
+            "Inbox pagination and decoding contract fixtures; see adapter README",
+            capabilities=(SMS_INBOX_READ.id,),
         ),
     ),
 )
@@ -81,7 +90,10 @@ class ZteMf833tDevice:
             headers={"Referer": settings.base_url.rstrip("/") + "/index.html"},
             transport=transport,
         )
-        self._capabilities = CapabilitySet(CapabilityBinding(DEVICE_STATUS_READ, self))
+        self._capabilities = CapabilitySet(
+            CapabilityBinding(DEVICE_STATUS_READ, self), CapabilityBinding(SMS_INBOX_READ, self)
+        )
+        self._inbox_lock = asyncio.Lock()
 
     @property
     def device_id(self) -> CellularDeviceId:
@@ -104,6 +116,78 @@ class ZteMf833tDevice:
 
     async def close(self) -> None:
         await self._client.aclose()
+
+    async def scan(self) -> InboxSnapshot:
+        if self._client.is_closed:
+            raise RuntimeError("ZTE MF833T adapter is closed")
+        started = datetime.now(UTC)
+        try:
+            # Includes lock acquisition, identity checks and all pages.
+            async with asyncio.timeout(self._settings.inbox_timeout_seconds):
+                async with self._inbox_lock:
+                    observation, _ = await self._inspect()
+                    if observation.availability is not Availability.READY:
+                        raise InboxReadError(observation.issue or DeviceReadIssue.INVALID_RESPONSE)
+                    items: dict[str, InboxItem] = {}
+                    seen_pages: set[tuple[str, ...]] = set()
+                    for page in range(self._settings.max_pages):
+                        response = await self._client.get(
+                            "/goform/goform_get_cmd_process",
+                            params={
+                                "isTest": "false",
+                                "cmd": "sms_page_data",
+                                "page": page,
+                                "data_per_page": self._settings.page_size,
+                                "mem_store": 1,
+                                "tags": 10,
+                                "order_by": "order by id desc",
+                            },
+                        )
+                        self._check_response(response)
+                        data = response.json()
+                        if not isinstance(data, dict):
+                            raise ValueError("Invalid inbox response")
+                        if data.get("loginfo") == "no":
+                            raise InboxReadError(DeviceReadIssue.AUTH_REQUIRED)
+                        if data.get("result") in ("failure", "fail"):
+                            raise ValueError("Inbox scan rejected")
+                        rows = data.get("messages")
+                        if not isinstance(rows, list) or len(rows) > self._settings.page_size:
+                            raise ValueError("Invalid inbox page")
+                        page_ids = tuple(str(row.get("id")) for row in rows if isinstance(row, dict))
+                        if rows and (len(page_ids) != len(rows) or page_ids in seen_pages):
+                            raise ValueError("Repeated or invalid inbox page")
+                        if len(set(page_ids)) != len(page_ids):
+                            raise ValueError("Duplicate slots in inbox page")
+                        seen_pages.add(page_ids)
+                        for row in rows:
+                            item = parse_item(row)
+                            if item is None:
+                                continue
+                            previous = items.get(item.provider_id)
+                            if previous is not None and previous != item:
+                                # A moving inbox changed a slot during pagination; retry the full scan.
+                                raise ValueError("Inconsistent inbox scan")
+                            items[item.provider_id] = item
+                        if len(rows) < self._settings.page_size:
+                            return InboxSnapshot(
+                                InboxSource(
+                                    self.device_id, self._settings.storage_generation, "device-database"
+                                ),
+                                self._settings.subscription_generation,
+                                started,
+                                datetime.now(UTC),
+                                tuple(items.values()),
+                            )
+                    raise ValueError("Inbox pagination limit exceeded")
+        except _ReadFailure as exc:
+            raise InboxReadError(exc.issue) from None
+        except (TimeoutError, httpx.TimeoutException):
+            raise InboxReadError(DeviceReadIssue.TIMEOUT) from None
+        except httpx.HTTPError:
+            raise InboxReadError(DeviceReadIssue.OFFLINE) from None
+        except (ValueError, UnicodeError):
+            raise InboxReadError(DeviceReadIssue.INVALID_RESPONSE) from None
 
     async def _inspect(self) -> tuple[DeviceObservation, DeviceStatus]:
         if self._client.is_closed:

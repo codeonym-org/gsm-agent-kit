@@ -27,8 +27,9 @@ The workflows, conventions and templates originate from codeonym-oss/acli-py.
 CI is adapted to the 13-package workspace and Python 3.13+, with Linux,
 macOS and Windows package/import checks. Modem hardware is not required in CI.
 Build checks validate all wheels and source distributions and their metadata.
-Behavior tests cover the implemented device-inspection slice and run without
-hardware. New implementations must add corresponding behavioral coverage.
+Behavior tests cover device inspection, inbox protocol decoding and durable SMS
+ingestion with temporary SQLite databases, without hardware. New implementations
+must add corresponding behavioral coverage.
 
 Dependabot groups weekly GitHub Actions and uv updates. Issue forms and PR
 templates keep real phone numbers, SMS contents, SIM identifiers and credentials

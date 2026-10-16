@@ -1,7 +1,7 @@
 # gsm-agent-zte-mf833t
 
 Model-specific ZTE MF833T adapter for its HTTP management interface. Implements
-only `device.status.read` in this slice. SMS and USSD contracts follow separately.
+`device.status.read` and `sms.inbox.read`. SMS submission and USSD follow separately.
 
 Settings belong to this integration: `ZteMf833tSettings(base_url, timeout_seconds)`.
 The URL defaults to `http://192.168.0.1`; timeout defaults to three seconds and
@@ -17,7 +17,8 @@ HTTP proxy environment variables are ignored and redirects are not followed.
 
 The adapter identifies the frontend's `DEVICE` value, then reads only firmware,
 hardware revision, provider, network type and signal bars from goform. It does
-not request phone numbers, IMSI, IMEI, SMS contents or settings changes.
+not request phone numbers, IMSI, IMEI, SMS contents or settings changes during status inspection.
+An explicit inbox scan reads sender addresses and message contents for ingestion.
 
 Adapter ID/version and declared model are separate from `observation` values.
 Unknown identity, model mismatch, offline transport, login requirements and
@@ -25,7 +26,7 @@ malformed payloads produce explicit availability/issues. Support remains fixed.
 Missing firmware/hardware is unknown; an unverified variant is untested.
 Only a matching device-verification record establishes verified compatibility.
 Protocol fixtures alone never do so. Verification applies only to implemented
-status inspection, not to SMS, USSD or every device from the same manufacturer.
+status inspection and inbox reading, not to SMS sending, USSD or every device from the same manufacturer.
 
 `http-management` records the observed management access mode, not a claim about
 USB composition, AT ports or registration on the cellular network. `ready` means
@@ -47,3 +48,42 @@ were made; no SMS, USSD, configuration changes or subscriber identifiers were
 requested. The manifest records this device-verification evidence for status
 inspection only. The assembled API is tested separately against a fake HTTP
 device, keeping CI independent of hardware.
+
+The inbox capability was also verified on 2026-10-16 against this exact variant.
+The real `sms_data_total` command repeatedly returned its first page despite
+different page numbers. The working command is `sms_page_data` with zero-based
+pages. Ten-row reads traversed the complete stored scope, including outbound
+rows; only received tags `0`/`1` became observations. The adapter returned all
+36 received messages. No contents, sender numbers or subscriber identifiers are
+included in fixtures or this repository. Only GET requests were issued, with no
+send, mark-read, delete or configuration requests. The assembled server/API and
+SQLite ledger were then verified against this device, using a temporary database:
+existing messages stayed baselined and record identities survived restart.
+
+## Inbox behavior and settings
+
+`scan()` performs model/status checks and reads the device database
+(`mem_store=1`, `tags=10`, descending IDs). It either returns the complete scanned
+scope or raises a normalized `InboxReadError`. It never returns successful
+truncation after a malformed, repeated or failed page or a pagination cap.
+Inbox movement can prevent an atomic view; conflicting slot observations fail
+the scan for retry. Wire bodies decode as strict UTF-16BE; partial concatenated
+messages carry `complete=False` so the application can baseline them safely.
+
+`ZteMf833tSettings` additionally accepts `inbox_timeout_seconds=10`,
+`page_size=50`, `max_pages=100`, `storage_generation="initial"` and
+`subscription_generation="initial"`. The inbox timeout includes waiting for the
+scan lock, identification and every page; the status timeout remains separate.
+External cancellation propagates and does not become an empty inbox.
+
+The adapter does not read IMSI/ICCID or automatically detect SIM/storage
+replacement. Set a new opaque subscription generation after a SIM change; set
+a new storage generation after resetting or replacing storage. Device-retained
+messages keep their occurrence identity across a subscription change, while the
+ledger marks their attribution uncertain. Provider slot/sender/timestamp evidence
+keeps partial completion stable; completed body changes distinguish slot reuse.
+Two otherwise identical receipts with identical evidence remain indistinguishable.
+While an occurrence is incomplete, matching slot/sender/timestamp evidence is
+treated conservatively as its continuation even if the body changes; this can
+suppress an ambiguous reuse of that same evidence rather than reply to backlog.
+See the [server configuration](../../../../apps/server/README.md) for env names.

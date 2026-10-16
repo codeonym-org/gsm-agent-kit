@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Self
 
+from gsm_agent.application.inbox import InboxRecord
 from gsm_agent_core.domain.devices import (
     AdapterManifest,
     Availability,
@@ -11,12 +12,56 @@ from gsm_agent_core.domain.devices import (
     DeviceReadIssue,
     DeviceStatus,
 )
+from gsm_agent_core.domain.sms import SmsAddress
 from pydantic import BaseModel
 
 
 class ErrorResponse(BaseModel):
     detail: str
     capability: CapabilityId | None = None
+    issue: DeviceReadIssue | None = None
+
+
+class InboxRecordResponse(BaseModel):
+    id: str
+    device_id: str
+    storage_generation: str
+    storage: str
+    subscription_generation: str
+    subscription_uncertain: bool
+    provider_id: str
+    sender: SmsAddress
+    body: str
+    provider_timestamp: str
+    complete: bool
+    baselined: bool
+    replyable: bool
+    observed_at: datetime
+
+    @classmethod
+    def from_domain(cls, record: InboxRecord) -> Self:
+        return cls(
+            id=record.id,
+            device_id=record.source.device_id.value,
+            storage_generation=record.source.storage_generation,
+            storage=record.source.storage,
+            subscription_generation=record.subscription_generation,
+            subscription_uncertain=record.subscription_uncertain,
+            provider_id=record.item.provider_id,
+            sender=record.item.sender,
+            body=record.item.body,
+            provider_timestamp=record.item.provider_timestamp,
+            complete=record.item.complete,
+            baselined=record.baselined,
+            replyable=record.replyable,
+            observed_at=record.observed_at,
+        )
+
+
+class IngestResponse(BaseModel):
+    observed: int
+    queued: int
+    baselined: bool
 
 
 class AdapterResponse(BaseModel):

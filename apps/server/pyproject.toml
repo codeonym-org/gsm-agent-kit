@@ -26,6 +26,9 @@ simulated = [
 zte-mf833t = [
     "gsm-agent-zte-mf833t",
 ]
+inbox = [
+    "gsm-agent-sqlite",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -39,3 +42,4 @@ gsm-agent = { workspace = true }
 gsm-agent-simulated = { workspace = true }
 gsm-agent-core = { workspace = true }
 gsm-agent-zte-mf833t = { workspace = true }
+gsm-agent-sqlite = { workspace = true }

@@ -6,8 +6,10 @@ from typing import assert_type
 import pytest
 from dishka import Provider, Scope, provide
 from fastapi.testclient import TestClient
+from gsm_agent.application.commands.ingest_inbox import IngestInbox
 from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.queries.devices import GetDeviceStatus, ListAdapters, ListDevices
+from gsm_agent.application.queries.inbox import ListStoredMessages
 from gsm_agent_core.capabilities.catalog import CapabilityKey
 from gsm_agent_core.domain.devices import (
     AdapterManifest,
@@ -166,7 +168,12 @@ async def test_mediary_dispatches_only_query_contracts_with_typed_results() -> N
         async with container() as scope:
             queries = await scope.get(QuerySender)
             mediator = await scope.get(Mediator)
-            assert all(issubclass(item.message_type, Query) for item in mediator.registrations().handlers)
+            for item in mediator.registrations().handlers:
+                if item.message_type is IngestInbox:
+                    assert not issubclass(item.message_type, Query)
+                else:
+                    assert issubclass(item.message_type, Query)
+            assert issubclass(ListStoredMessages, Query)
             assert len(await queries.send(ListAdapters())) == 1
             assert len(await queries.send(ListDevices())) == 1
             result = await queries.send(GetDeviceStatus(CellularDeviceId("demo-device")))

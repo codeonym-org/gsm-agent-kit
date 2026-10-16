@@ -2,8 +2,9 @@
 
 Status: design proposal. Device inspection and a typed status capability are
 implemented with simulated and model-specific ZTE MF833T adapters.
-The MF833T adapter records variant-specific verification evidence. SMS, USSD and
-durable workflows below remain proposed contracts for subsequent slices.
+The MF833T adapter records variant-specific verification evidence. Incoming SMS
+snapshots, durable ingestion, source baselines and stored-message queries are also
+implemented. Sending, AI and USSD below remain proposed contracts for subsequent slices.
 `.v0` supplies reference behavior, not the new public contracts.
 
 Domain terms follow the root [glossary](../../GLOSSARY.md). The glossary defines
@@ -143,7 +144,7 @@ Proposed initial catalog:
 | Key | Interface | Essential contract |
 | --- | --- | --- |
 | `sms.send` | `SmsSender` | Submit one prepared single-segment SMS and report the submission outcome |
-| `sms.inbox.read` | `SmsInbox` | Read complete inbound messages without marking them read or deleting them |
+| `sms.inbox.read` | `SmsInbox` | Read complete and incomplete observations without marking read or deleting; only complete observations can be replyable |
 | `device.status.read` | `DeviceStatusReader` | Return normalized observations with explicit unknown values |
 | `ussd.exchange` | `UssdClient` | Start one exchange, collect its response and release the session |
 
@@ -219,9 +220,11 @@ messages or publish application events.
 
 The scan is not an atomic snapshot unless the underlying device guarantees it.
 Start/end timestamps expose that limitation; repeated scans tolerate overlap.
-Incomplete multipart messages are held within the adapter until complete and
-must not appear as replyable `IncomingSms` values. The snapshot can report a
-pending count without exposing partial messages as complete ones.
+Implemented snapshots contain `InboxItem` observations, including incomplete
+multipart messages with `complete=False`. They never appear as replyable complete
+messages. Exposing their stable occurrence evidence is necessary to baseline a
+partial present at first startup and preserve that exclusion when it completes;
+a pending count alone cannot establish which later completions are backlog.
 
 Provider IDs may be reused. An inbox source distinguishes the logical cellular device,
 relevant storage/SIM generation and storage location. Stored-message identity
@@ -238,6 +241,17 @@ The application persists observations and deduplicates before publishing
 `SmsReceived`. Its ledger is independent of device unread flags. On first start,
 the default baseline records existing messages without replying to the backlog.
 Event delivery is at least once; handlers use durable processing identity.
+
+The implemented SQLite ledger commits observations, per-storage/subscription
+baselines and an event outbox atomically. A generated record ID stays stable
+through partial completion. Slot/sender/timestamp evidence links partial versions;
+completed content changes can identify a reused slot. Exact repeated evidence and
+content cannot distinguish an identical new receipt on this device.
+Subscription generation is deliberately separate from storage identity: changing
+a SIM baselines the new subscription and marks retained observations' attribution
+uncertain, without re-keying them. Resetting storage requires a new configured
+storage generation and baselines that scope. MF833T generations are operator
+configuration because this integration does not probe subscriber identifiers.
 
 Start with polling. Native adapter notifications can later wake an ingestion
 scan, while the persisted ledger remains the authority for processing. There
