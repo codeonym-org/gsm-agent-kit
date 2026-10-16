@@ -18,6 +18,7 @@ class CellularDeviceId:
 class CapabilityId(StrEnum):
     DEVICE_STATUS_READ = "device.status.read"
     SMS_INBOX_READ = "sms.inbox.read"
+    SMS_SEND = "sms.send"
 
 
 class Availability(StrEnum):

@@ -1,7 +1,7 @@
 # gsm-agent-zte-mf833t
 
 Model-specific ZTE MF833T adapter for its HTTP management interface. Implements
-`device.status.read` and `sms.inbox.read`. SMS submission and USSD follow separately.
+`device.status.read`, `sms.inbox.read` and `sms.send`. USSD follows separately.
 
 Settings belong to this integration: `ZteMf833tSettings(base_url, timeout_seconds)`.
 The URL defaults to `http://192.168.0.1`; timeout defaults to three seconds and
@@ -26,7 +26,9 @@ malformed payloads produce explicit availability/issues. Support remains fixed.
 Missing firmware/hardware is unknown; an unverified variant is untested.
 Only a matching device-verification record establishes verified compatibility.
 Protocol fixtures alone never do so. Verification applies only to implemented
-status inspection and inbox reading, not to SMS sending, USSD or every device from the same manufacturer.
+status inspection and inbox reading. Sending has fixture evidence only; overall
+compatibility remains `untested` until every declared capability is device-verified.
+This does not imply USSD or support for every device from the same manufacturer.
 
 `http-management` records the observed management access mode, not a claim about
 USB composition, AT ports or registration on the cellular network. `ready` means
@@ -87,3 +89,24 @@ While an occurrence is incomplete, matching slot/sender/timestamp evidence is
 treated conservatively as its continuation even if the body changes; this can
 suppress an ambiguous reuse of that same evidence rather than reply to backlog.
 See the [server configuration](../../../../apps/server/README.md) for env names.
+
+## SMS submission
+
+The typed `sms.send` port exposes `SmsSendConstraints` and accepts one immutable
+`PreparedSms`, including separate message and attempt IDs. GSM7 is limited to
+160 units (extension characters count twice); BMP UCS2 is limited to 70 units.
+It validates the prepared part and never truncates, transliterates, splits or retries it.
+
+Each submission budget covers the operation lock, model/status checks, the
+single `SEND_SMS` POST and asynchronous `sms_cmd_status_info` completion checks
+with `sms_cmd=4`. HTTP acknowledgement alone is insufficient. Completion `3`
+means submission acceptance; `2` means rejection. Timeouts or malformed/lost
+responses after entering POST are unknown. Before POST, unavailable identity,
+invalid input or an expired lock budget are not-submitted. Cancellation propagates.
+An uncertain operation latches the adapter busy for subsequent writes; the
+application ledger also quarantines uncertain attempts across restart.
+
+Adapter settings: `send_timeout_seconds=30`, `send_poll_interval_seconds=1`.
+The application owns normalization, natural splitting, output caps, durable intent
+and progress. Sending has hardware-free fixtures and assembled API tests; no
+new live SMS submission has been performed for this implementation.

@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Self
+from uuid import UUID
 
 from gsm_agent.application.inbox import InboxRecord
+from gsm_agent.application.submissions import SubmissionPart, SubmissionRecord
 from gsm_agent_core.domain.devices import (
     AdapterManifest,
     Availability,
@@ -13,13 +15,45 @@ from gsm_agent_core.domain.devices import (
     DeviceStatus,
 )
 from gsm_agent_core.domain.sms import SmsAddress
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ErrorResponse(BaseModel):
     detail: str
     capability: CapabilityId | None = None
     issue: DeviceReadIssue | None = None
+
+
+class SendSmsRequest(BaseModel):
+    request_id: UUID
+    destination: str = Field(pattern=r"^\+[1-9][0-9]{2,14}$")
+    text: str = Field(min_length=1, max_length=10000)
+
+
+class SubmissionResponse(BaseModel):
+    device_id: str
+    request_id: UUID
+    destination: str
+    truncated: bool
+    accepted_parts: int
+    complete: bool
+    blocked: bool
+    created_at: datetime
+    parts: tuple[SubmissionPart, ...]
+
+    @classmethod
+    def from_domain(cls, record: SubmissionRecord) -> Self:
+        return cls(
+            device_id=record.device_id.value,
+            request_id=record.request_id,
+            destination=record.destination.value,
+            truncated=record.truncated,
+            accepted_parts=record.accepted_parts,
+            complete=record.complete,
+            blocked=record.blocked,
+            created_at=record.created_at,
+            parts=record.parts,
+        )
 
 
 class InboxRecordResponse(BaseModel):

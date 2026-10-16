@@ -14,6 +14,14 @@ from gsm_agent.application.errors import (
 from gsm_agent.application.inbox import InboxDeadlineError, InboxDisabledError
 from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.ports.inbox import InboxStore
+from gsm_agent.application.ports.submissions import SubmissionStore
+from gsm_agent.application.submissions import (
+    InvalidSmsError,
+    SubmissionConflictError,
+    SubmissionDeadlineError,
+    SubmissionDisabledError,
+    SubmissionNotFoundError,
+)
 from gsm_agent_core.domain.devices import DeviceReadIssue
 from gsm_agent_core.domain.sms import InboxReadError
 
@@ -33,6 +41,8 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
         try:
             # Compose eagerly: invalid selections fail startup, not the first request.
             await container.get(DeviceDirectory)
+            if config.submissions.enabled:
+                await container.get(SubmissionStore)
             if config.inbox.enabled:
                 await container.get(InboxStore)
                 polling = asyncio.create_task(poll_inboxes(container, config.inbox), name="inbox-polling")
@@ -70,6 +80,25 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
 
     for error in (InboxReadError, InboxDisabledError, InboxDeadlineError):
         app.add_exception_handler(error, inbox_error)
+
+    async def submission_error(request: Request, exc: Exception) -> JSONResponse:
+        code = 422 if isinstance(exc, InvalidSmsError) else 409
+        if isinstance(exc, SubmissionNotFoundError):
+            code = 404
+        elif isinstance(exc, SubmissionDisabledError):
+            code = 503
+        elif isinstance(exc, SubmissionDeadlineError):
+            code = 504
+        return JSONResponse(status_code=code, content={"detail": str(exc)})
+
+    for error in (
+        InvalidSmsError,
+        SubmissionConflictError,
+        SubmissionNotFoundError,
+        SubmissionDisabledError,
+        SubmissionDeadlineError,
+    ):
+        app.add_exception_handler(error, submission_error)
 
     @app.get("/health")
     async def health() -> dict[str, str]:

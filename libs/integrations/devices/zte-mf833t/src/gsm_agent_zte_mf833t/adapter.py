@@ -1,4 +1,4 @@
-"""Read-only MF833T goform API; no vendor payload crosses this boundary."""
+"""Model-specific MF833T goform API; no vendor payload crosses this boundary."""
 
 import asyncio
 import re
@@ -9,6 +9,7 @@ import httpx
 from gsm_agent_core.capabilities.catalog import (
     DEVICE_STATUS_READ,
     SMS_INBOX_READ,
+    SMS_SEND,
     CapabilityBinding,
     CapabilityKey,
     CapabilitySet,
@@ -30,6 +31,7 @@ from gsm_agent_core.domain.devices import (
 from gsm_agent_core.domain.sms import InboxItem, InboxReadError, InboxSnapshot, InboxSource
 
 from gsm_agent_zte_mf833t.inbox import parse_item
+from gsm_agent_zte_mf833t.sending import ZteSmsSender
 from gsm_agent_zte_mf833t.settings import ZteMf833tSettings
 
 REFERENCE_VARIANT = DeviceVariant("BD_WANAMARMF833TV1.0.0B04", "djtA", "http-management")
@@ -37,7 +39,7 @@ MANIFEST = AdapterManifest(
     adapter_id="zte-mf833t",
     version=version("gsm-agent-zte-mf833t"),
     model=DeviceModel("ZTE", "MF833T"),
-    capabilities=(DEVICE_STATUS_READ.id, SMS_INBOX_READ.id),
+    capabilities=(DEVICE_STATUS_READ.id, SMS_INBOX_READ.id, SMS_SEND.id),
     required_transports=("http-management",),
     runtime_dependencies=("httpx>=0.28.1",),
     compatibility_evidence=(
@@ -50,8 +52,8 @@ MANIFEST = AdapterManifest(
         CompatibilityEvidence(
             REFERENCE_VARIANT,
             VerificationKind.PROTOCOL_FIXTURE,
-            "Inbox pagination and decoding contract fixtures; see adapter README",
-            capabilities=(SMS_INBOX_READ.id,),
+            "Inbox and SMS submission protocol fixtures; sending not yet device-verified; see adapter README",
+            capabilities=(SMS_INBOX_READ.id, SMS_SEND.id),
         ),
     ),
 )
@@ -90,8 +92,12 @@ class ZteMf833tDevice:
             headers={"Referer": settings.base_url.rstrip("/") + "/index.html"},
             transport=transport,
         )
+        self._operation_lock = asyncio.Lock()
+        sender = ZteSmsSender(self._client, settings, self._inspect, self._operation_lock)
         self._capabilities = CapabilitySet(
-            CapabilityBinding(DEVICE_STATUS_READ, self), CapabilityBinding(SMS_INBOX_READ, self)
+            CapabilityBinding(DEVICE_STATUS_READ, self),
+            CapabilityBinding(SMS_INBOX_READ, self),
+            CapabilityBinding(SMS_SEND, sender),
         )
         self._inbox_lock = asyncio.Lock()
 

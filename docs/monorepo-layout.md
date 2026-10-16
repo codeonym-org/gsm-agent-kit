@@ -50,7 +50,9 @@ gsm-agent-kit/
 Device inspection works with the simulated and ZTE MF833T adapters through the
 server. The MF833T also implements incoming SMS scans; application ingestion,
 SQLite persistence, source baselines and inbox queries are implemented.
-Other physical-device integrations, outgoing SMS and AI workflows remain queued.
+Outgoing SMS has typed constraints, bounded plain-text preparation, durable
+intent/attempt tracking and manual API submission. Other physical-device
+integrations and AI workflows remain queued.
 Package-name availability on PyPI is unverified.
 
 ## Package conventions

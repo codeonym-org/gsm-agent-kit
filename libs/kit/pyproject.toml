@@ -39,3 +39,6 @@ zte-mf833t = [
 inbox = [
     "gsm-agent-server[inbox]",
 ]
+sms = [
+    "gsm-agent-server[sms]",
+]

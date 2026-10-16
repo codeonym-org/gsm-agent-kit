@@ -1,13 +1,17 @@
 import secrets
 from typing import Annotated
+from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from gsm_agent.application.commands.ingest_inbox import IngestInbox
+from gsm_agent.application.commands.send_sms import SendSms
 from gsm_agent.application.queries.devices import GetDevice, GetDeviceStatus, ListAdapters, ListDevices
 from gsm_agent.application.queries.inbox import ListStoredMessages
+from gsm_agent.application.queries.submissions import GetSubmission
 from gsm_agent_core.domain.devices import CellularDeviceId
+from gsm_agent_core.domain.submission import SmsDestination
 from mediary.cqrs import CommandSender, QuerySender
 
 from gsm_agent_server.api.schemas import (
@@ -16,7 +20,9 @@ from gsm_agent_server.api.schemas import (
     ErrorResponse,
     InboxRecordResponse,
     IngestResponse,
+    SendSmsRequest,
     StatusResponse,
+    SubmissionResponse,
 )
 
 bearer = HTTPBearer(auto_error=False)
@@ -93,3 +99,30 @@ async def messages(
 async def ingest_inbox(device_id: DeviceIdPath, commands: FromDishka[CommandSender]) -> IngestResponse:
     result = await commands.send(IngestInbox(CellularDeviceId(device_id)))
     return IngestResponse(observed=result.observed, queued=result.queued, baselined=result.baselined)
+
+
+@router.post(
+    "/devices/{device_id}/submissions",
+    response_model=SubmissionResponse,
+    responses={code: {"model": ErrorResponse} for code in (404, 409, 422, 501, 503, 504)},
+)
+async def send_sms(
+    device_id: DeviceIdPath, body: SendSmsRequest, commands: FromDishka[CommandSender]
+) -> SubmissionResponse:
+    record = await commands.send(
+        SendSms(CellularDeviceId(device_id), body.request_id, SmsDestination(body.destination), body.text)
+    )
+    return SubmissionResponse.from_domain(record)
+
+
+@router.get(
+    "/devices/{device_id}/submissions/{request_id}",
+    response_model=SubmissionResponse,
+    responses={code: {"model": ErrorResponse} for code in (404, 503)},
+)
+async def submission(
+    device_id: DeviceIdPath, request_id: UUID, queries: FromDishka[QuerySender]
+) -> SubmissionResponse:
+    return SubmissionResponse.from_domain(
+        await queries.send(GetSubmission(CellularDeviceId(device_id), request_id))
+    )
