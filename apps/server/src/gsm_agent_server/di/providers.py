@@ -4,7 +4,10 @@ from dishka import Provider, Scope, provide
 from gsm_agent.application.inbox import InboxDisabledError, InboxPolicy, IngestionCoordinator
 from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.ports.inbox import InboxStore
+from gsm_agent.application.ports.submissions import SubmissionStore
 from gsm_agent.application.queries.devices import DeviceQueryPolicy
+from gsm_agent.application.submissions import SubmissionCoordinator, SubmissionDisabledError, SubmissionPolicy
+from gsm_agent.application.text import SmsLimits
 from gsm_agent_core.domain.devices import CellularDeviceId
 from gsm_agent_core.ports import CellularDevice
 
@@ -14,6 +17,29 @@ from gsm_agent_server.runtime.settings import DeviceSettings, Settings
 
 class DeviceProvider(Provider):
     scope = Scope.APP
+
+    @provide
+    def submission_policy(self, settings: Settings) -> SubmissionPolicy:
+        config = settings.submissions
+        return SubmissionPolicy(SmsLimits(config.max_total_chars, config.max_parts), config.timeout_seconds)
+
+    @provide
+    def submission_coordinator(self) -> SubmissionCoordinator:
+        return SubmissionCoordinator()
+
+    @provide
+    async def submission_store(self, settings: Settings) -> AsyncIterator[SubmissionStore]:
+        if not settings.submissions.enabled:
+            raise SubmissionDisabledError("SMS submission is disabled; enable GSM_SUBMISSIONS__ENABLED")
+        try:
+            from gsm_agent_sqlite import SqliteSubmissionStore
+        except ImportError as exc:
+            raise RuntimeError("Install gsm-agent-server[sms] for durable SMS submission") from exc
+        store = await SqliteSubmissionStore.open(settings.submissions.database_path)
+        try:
+            yield store
+        finally:
+            await store.close()
 
     @provide
     def inbox_policy(self, settings: Settings) -> InboxPolicy:
@@ -67,6 +93,8 @@ def _create_device(config: DeviceSettings) -> CellularDevice:
                     max_pages=connection.max_pages,
                     storage_generation=connection.storage_generation,
                     subscription_generation=connection.subscription_generation,
+                    send_timeout_seconds=connection.send_timeout_seconds,
+                    send_poll_interval_seconds=connection.send_poll_interval_seconds,
                 ),
             )
         from gsm_agent_simulated import SimulatedDevice

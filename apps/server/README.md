@@ -2,7 +2,7 @@
 
 API transport, dependency injection and runtime composition.
 
-The server exposes device inspection and optional durable SMS ingestion. Its hexagonal path is
+The server exposes device inspection, optional durable SMS ingestion and manual submission. Its hexagonal path is
 API routes → Mediary queries → application ports → cellular-device adapters.
 Dishka owns application and request scopes. Startup composes the selected
 adapter eagerly; shutdown closes its resources, including after startup failure.
@@ -123,7 +123,7 @@ Records and `SmsReceived(record_id)` events commit together before publication.
 Failed publication remains pending for a later successful ingestion, including
 after restart. Publication is at least once: future consumers must deduplicate
 by record ID. Each scan dispatches up to 100 pending events; later rounds drain
-the remainder. No AI handler or outgoing SMS submission is enabled in this slice.
+the remainder. Inbox polling does not itself send SMS or run an AI handler.
 
 The MF833T adapter uses `sms_page_data`: real hardware verification showed that
 `sms_data_total` ignores the page number. Repeated, malformed, inconsistent or
@@ -147,5 +147,70 @@ multiple owners. Shutdown cancels polling before closing adapters and SQLite.
 
 For containers, persist the ledger and route the management network to the backend; mounting
 the device's installer media does not expose the HTTP interface.
+
+## Outgoing SMS
+
+```bash
+GSM_DEVICE__ADAPTER=zte-mf833t GSM_DEVICE__ID=zte-device GSM_SUBMISSIONS__ENABLED=true \
+  uv run --package gsm-agent-server --extra zte-mf833t --extra sms gsm-agent-server
+```
+
+Standalone extras: `gsm-agent-server[zte-mf833t,sms]` or
+`gsm-agent-kit[zte-mf833t,sms]`. Add `inbox` and enable it separately to receive
+messages in the same process. Both SQLite ledgers need persistent storage.
+
+Submit with `POST /api/devices/zte-device/submissions`:
+
+```json
+{
+  "request_id": "c3ba616b-a7b1-4515-924a-b2b6d03527af",
+  "destination": "+<country-code><number>",
+  "text": "Hello from GSM Agent Kit"
+}
+```
+
+Replace the destination placeholder with an international number. Generate a new
+UUID for each new intent and keep that exact UUID, destination and text for
+retries. Reusing an ID with different input returns 409. Consult progress using
+`GET /api/devices/zte-device/submissions/{request_id}`; that query performs no device I/O.
+
+Responses contain the immutable prepared parts, truncation flag, accepted-part
+count and each attempt's identity, outcome and reason. HTTP 200 reports durable
+progress, including rejected/unknown outcomes; `complete` means all parts were
+accepted for sending, never recipient delivery. Unknown/rejected parts stop the
+request. A replay can resume pending or known-not-submitted parts, but never
+accepted or uncertain ones. The original plan remains unchanged after a settings change.
+
+Intent and each attempt commit before device I/O. Startup marks interrupted
+attempts unknown without sending anything. An unresolved unknown attempt blocks
+new requests on that logical device until separately reconciled; there is no
+force-retry endpoint. Keep the physical device/SIM and both ledgers consistent
+while requests are unresolved. Run one runtime owner per device/ledger.
+Cancellation quarantines only the lock owner's active attempt. Application
+deadlines return existing durable progress, or 504 if no intent was committed.
+
+Markdown styles and HTML are removed by application policy; links/code text are
+preserved. Paragraph, sentence and word boundaries are preferred, with grapheme
+boundaries for long words. Parts are independent single-segment SMS messages,
+numbered `(1/2)`, rather than concatenated SMS with UDH. GSM7 extension characters
+cost two units; the current adapter supports GSM7 and BMP UCS2. Non-BMP text,
+surrogates, empty text and unrepresentable clusters return 422 before intent/I/O.
+Output caps include numbering; shortening is visible as `truncated=true` and `...`.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `GSM_SUBMISSIONS__ENABLED` | `false` | Enable durable manual sending; disabled returns 503 |
+| `GSM_SUBMISSIONS__DATABASE_PATH` | `data/submissions.sqlite3` | Persist intent, plans and attempts |
+| `GSM_SUBMISSIONS__MAX_TOTAL_CHARS` | `240` | Total transmitted characters, including numbering; 16–10000 |
+| `GSM_SUBMISSIONS__MAX_PARTS` | `3` | Maximum independent SMS parts, 1–9 |
+| `GSM_SUBMISSIONS__TIMEOUT_SECONDS` | `100` | Whole command budget, including workflow lock and persistence |
+| `GSM_DEVICE__ZTE_MF833T__SEND_TIMEOUT_SECONDS` | `30` | Per-part adapter budget, including operation lock, checks, POST and completion polling |
+| `GSM_DEVICE__ZTE_MF833T__SEND_POLL_INTERVAL_SECONDS` | `1` | Delay between completion checks |
+
+The ZTE adapter checks model identity before writing and waits for asynchronous
+firmware completion after its initial HTTP acknowledgement. Sending is covered
+by fake HTTP and SQLite/API tests; no live test SMS has been sent for this slice.
+Its new sending capability therefore has fixture evidence only, and overall
+variant compatibility is `untested` until all declared capabilities have device verification.
 
 Python import: `gsm_agent_server`.

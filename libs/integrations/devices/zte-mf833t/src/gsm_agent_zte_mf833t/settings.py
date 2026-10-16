@@ -12,6 +12,8 @@ class ZteMf833tSettings:
     max_pages: int = 100
     storage_generation: str = "initial"
     subscription_generation: str = "initial"
+    send_timeout_seconds: float = 30
+    send_poll_interval_seconds: float = 1
 
     def __post_init__(self) -> None:
         url = urlsplit(self.base_url)
@@ -35,6 +37,10 @@ class ZteMf833tSettings:
             raise ValueError("ZTE inbox timeout must be finite, positive and at most 120 seconds")
         if not 1 <= self.page_size <= 500 or not 1 <= self.max_pages <= 1000:
             raise ValueError("Invalid inbox pagination limits")
+        if not math.isfinite(self.send_timeout_seconds) or not 0 < self.send_timeout_seconds <= 120:
+            raise ValueError("Send timeout must be finite, positive and at most 120 seconds")
+        if not math.isfinite(self.send_poll_interval_seconds) or not 0 < self.send_poll_interval_seconds <= 5:
+            raise ValueError("Send poll interval must be finite, positive and at most 5 seconds")
         if any(
             not value.strip() or len(value) > 128
             for value in (self.storage_generation, self.subscription_generation)

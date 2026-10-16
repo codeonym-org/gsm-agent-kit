@@ -4,7 +4,8 @@ Status: design proposal. Device inspection and a typed status capability are
 implemented with simulated and model-specific ZTE MF833T adapters.
 The MF833T adapter records variant-specific verification evidence. Incoming SMS
 snapshots, durable ingestion, source baselines and stored-message queries are also
-implemented. Sending, AI and USSD below remain proposed contracts for subsequent slices.
+implemented. Typed SMS submission, durable attempts/progress and bounded plain-text
+preparation are implemented too. AI and USSD remain proposed contracts for subsequent slices.
 `.v0` supplies reference behavior, not the new public contracts.
 
 Domain terms follow the root [glossary](../../GLOSSARY.md). The glossary defines

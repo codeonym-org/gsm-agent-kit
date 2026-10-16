@@ -51,7 +51,8 @@ async def test_read_only_normalization_and_typed_capability_contract() -> None:
         assert descriptor.adapter.version == MANIFEST.version
         assert descriptor.observation is not None
         assert descriptor.observation.observed_model == "MF833T"
-        assert descriptor.observation.compatibility is Compatibility.VERIFIED
+        # Status/inbox are device-verified; the newly declared send capability has fixture evidence.
+        assert descriptor.observation.compatibility is Compatibility.UNTESTED
         assert descriptor.observation.variant is not None
         assert descriptor.observation.variant.firmware == STATUS["wa_inner_version"]
         reader = device.get(DEVICE_STATUS_READ)

@@ -12,6 +12,10 @@ set `GSM_INBOX__ENABLED=true`. The standalone combination is
 `gsm-agent-kit[zte-mf833t,inbox]`; it adds no unrelated device or AI integrations.
 The `sqlite` extra selects the persistence library without the server.
 
+The `sms` extra selects durable manual submission support. Combine it with a
+device extra (`gsm-agent-kit[zte-mf833t,sms]`) and enable
+`GSM_SUBMISSIONS__ENABLED=true`. It adds no AI or other device integration.
+
 Other hardware/AI extras still select scaffolds. Packages are not yet
 published; the extras can be exercised using workspace or built distributions.
 

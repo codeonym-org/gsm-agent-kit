@@ -29,6 +29,9 @@ zte-mf833t = [
 inbox = [
     "gsm-agent-sqlite",
 ]
+sms = [
+    "gsm-agent-sqlite",
+]
 
 [build-system]
 requires = ["hatchling"]
