@@ -28,7 +28,7 @@ CI is adapted to the 13-package workspace and Python 3.13+, with Linux,
 macOS and Windows package/import checks. Modem hardware is not required in CI.
 Build checks validate all wheels and source distributions and their metadata.
 Behavior tests cover device inspection, inbox protocol decoding and durable SMS
-ingestion/submission and persistent AI replies with temporary SQLite databases,
+ingestion/submission, balance session ownership and persistent AI replies with temporary SQLite databases,
 fixture chat models and no paid API calls or hardware. New implementations
 must add corresponding behavioral coverage.
 

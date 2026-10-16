@@ -4,6 +4,7 @@ from uuid import UUID
 
 from gsm_agent.application.inbox import InboxRecord
 from gsm_agent.application.submissions import SubmissionPart, SubmissionRecord
+from gsm_agent_core.domain.balance import BalanceIssue
 from gsm_agent_core.domain.devices import (
     AdapterManifest,
     Availability,
@@ -21,7 +22,7 @@ from pydantic import BaseModel, Field
 class ErrorResponse(BaseModel):
     detail: str
     capability: CapabilityId | None = None
-    issue: DeviceReadIssue | None = None
+    issue: DeviceReadIssue | BalanceIssue | None = None
 
 
 class SendSmsRequest(BaseModel):

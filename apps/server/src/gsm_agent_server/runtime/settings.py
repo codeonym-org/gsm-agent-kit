@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
+from gsm_agent_core.domain.balance import BalanceCarrier
 from gsm_agent_core.domain.devices import Availability
 from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,6 +17,12 @@ class ZteHttpSettings(BaseModel):
     subscription_generation: str = Field(default="initial", min_length=1, max_length=128, pattern=r"\S")
     send_timeout_seconds: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
     send_poll_interval_seconds: float = Field(default=1, gt=0, le=5, allow_inf_nan=False)
+
+
+class BalanceSettings(BaseModel):
+    carrier: BalanceCarrier | None = None
+    timeout_seconds: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
+    cleanup_timeout_seconds: float = Field(default=2, gt=0, le=5, allow_inf_nan=False)
 
 
 class InboxSettings(BaseModel):
@@ -37,6 +44,7 @@ class DeviceSettings(BaseModel):
     id: str = Field(default="demo-device", pattern=r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")
     adapter: Literal["simulated", "zte-mf833t"] = "simulated"
     simulated_availability: Availability = Availability.READY
+    simulated_balance_enabled: bool = False
     zte_mf833t: ZteHttpSettings = Field(default_factory=ZteHttpSettings)
 
 
@@ -66,6 +74,7 @@ class Settings(BaseSettings):
     inbox: InboxSettings = Field(default_factory=InboxSettings)
     submissions: SubmissionSettings = Field(default_factory=SubmissionSettings)
     assistant: AssistantSettings = Field(default_factory=AssistantSettings)
+    balance: BalanceSettings = Field(default_factory=BalanceSettings)
     query_timeout_seconds: float = Field(default=5, gt=0, le=30, allow_inf_nan=False)
     api_token: SecretStr | None = Field(default=None, min_length=1)
 

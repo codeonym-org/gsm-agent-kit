@@ -16,6 +16,7 @@ from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.ports.inbox import InboxStore
 from gsm_agent.application.ports.replies import ReplyStore
 from gsm_agent.application.ports.submissions import SubmissionStore
+from gsm_agent.application.queries.balance import BalanceNotConfiguredError
 from gsm_agent.application.submissions import (
     InvalidSmsError,
     SubmissionConflictError,
@@ -24,6 +25,7 @@ from gsm_agent.application.submissions import (
     SubmissionNotFoundError,
 )
 from gsm_agent_core.ai import AIAgent
+from gsm_agent_core.domain.balance import BalanceIssue, BalanceReadError
 from gsm_agent_core.domain.devices import DeviceReadIssue
 from gsm_agent_core.domain.sms import InboxReadError
 
@@ -80,6 +82,20 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
 
     for error in (DeviceNotFoundError, UnsupportedCapabilityError, DeviceQueryTimeoutError):
         app.add_exception_handler(error, query_error)
+
+    async def balance_error(request: Request, exc: Exception) -> JSONResponse:
+        if isinstance(exc, BalanceReadError):
+            code = {
+                BalanceIssue.BUSY: 409,
+                BalanceIssue.UNAVAILABLE: 503,
+                BalanceIssue.INVALID_RESPONSE: 502,
+                BalanceIssue.CLEANUP_FAILED: 502,
+            }[exc.issue]
+            return JSONResponse(status_code=code, content={"detail": str(exc), "issue": exc.issue.value})
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+    for error in (BalanceReadError, BalanceNotConfiguredError):
+        app.add_exception_handler(error, balance_error)
 
     async def inbox_error(request: Request, exc: Exception) -> JSONResponse:
         if isinstance(exc, InboxReadError):

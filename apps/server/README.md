@@ -301,4 +301,71 @@ Model output is still checked by application SMS normalization and caps.
 | `GSM_ASSISTANT__HISTORY_RETENTION_DAYS` | `30` | Maximum age of retained exchanges |
 | `GSM_ASSISTANT__INPUT_MAX_CHARS` | `2000` | Maximum current user input sent to the model |
 
+## Carrier balance
+
+`GET /api/devices/{device_id}/balance` dispatches `ConsultBalance` through
+Mediary's `QuerySender`. The business operation observes account information;
+transient USSD transport writes do not make it a command. It accepts no code,
+purchase parameters or menu selections. It is protected by `GSM_API_TOKEN` when
+configured, and successful responses have `Cache-Control: no-store`.
+
+The current **ZTE MF833T returns 501 Unsupported immediately**, without modem
+I/O. Its archived USSD path timed out; this slice does not claim to repair or
+verify that firmware. Setting a carrier policy does not add device capabilities.
+Future adapters bind `carrier.balance.read` only when they implement its
+ownership, fresh-response and cleanup contract. They must serialize operations
+that share device state and retain busy status after uncertain cleanup.
+
+For a hardware-free demonstration, use the simulated profile:
+
+```bash
+GSM_DEVICE__ADAPTER=simulated GSM_DEVICE__ID=demo-device \
+  GSM_DEVICE__SIMULATED_BALANCE_ENABLED=true GSM_BALANCE__CARRIER=simulated \
+  uv run --package gsm-agent-server --extra simulated gsm-agent-server
+curl http://127.0.0.1:8000/api/devices/demo-device/balance
+```
+
+The response contains `raw_text`, `observed_at`, `credit` and `sms_allowance`.
+Simulation is explicitly labelled and leaves both numeric observations null.
+No generic parser guesses numbers from carrier text. When an adapter supplies
+recognized parsed values, credit has a decimal-string `amount`, `currency` and
+optional `conditions`; SMS allowance has `remaining` and optional `conditions`.
+Unrecognized values remain null, including a response that presents a menu.
+Menu prompts are returned as text and the owned session is closed without a
+selection. Parsed credit never substitutes for an SMS allowance.
+
+| HTTP status | Meaning |
+| --- | --- |
+| 200 | Valid observation and successful owned-session cleanup |
+| 401 | Missing or invalid configured bearer token |
+| 404 | Unknown logical cellular device |
+| 409 | Another operation or foreign USSD session owns the device |
+| 422 | Invalid device ID |
+| 501 | Adapter does not bind `carrier.balance.read` |
+| 502 | Malformed carrier response or failed/expired cleanup |
+| 503 | No configured carrier policy or temporarily unavailable consultation |
+| 504 | Deadline expired during ownership acquisition or response I/O |
+
+Only an acquired reservation is closed. Failed ownership acquisition never
+cancels a foreign session. Cleanup runs on success, failure, timeout and client
+cancellation. It has a separate small budget, so the maximum cooperative
+operation duration is the consultation timeout plus the cleanup timeout.
+Cleanup failure prevents a successful result; an original consultation failure
+retains its classification. There are no automatic retries, arbitrary USSD
+endpoints, offer purchases or recovery cancellations. One runtime process must
+own the device; an in-process reservation cannot exclude another application.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `GSM_BALANCE__CARRIER` | unset | Reviewed policy: `inwi` or `simulated` |
+| `GSM_BALANCE__TIMEOUT_SECONDS` | `30` | Ownership and response budget; positive, at most 120 seconds |
+| `GSM_BALANCE__CLEANUP_TIMEOUT_SECONDS` | `2` | Additional cleanup budget; positive, at most 5 seconds |
+| `GSM_DEVICE__SIMULATED_BALANCE_ENABLED` | `false` | Enable only the synthetic balance capability |
+
+The `inwi` policy fixes the non-purchasing consultation to `*120*30#`, as
+documented by [inwi](https://inwi.ma/fr/consultationsolde) (checked 2026-10-16).
+This documents carrier policy, not working USSD support on the attached ZTE.
+Additional carriers require reviewed policies; a user-supplied code is not a
+substitute. No live USSD request was issued to implement or test this slice.
+
 Python import: `gsm_agent_server`.

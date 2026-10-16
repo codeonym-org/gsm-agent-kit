@@ -1,7 +1,15 @@
 # gsm-agent-zte-mf833t
 
 Model-specific ZTE MF833T adapter for its HTTP management interface. Implements
-`device.status.read`, `sms.inbox.read` and `sms.send`. USSD follows separately.
+`device.status.read`, `sms.inbox.read` and `sms.send`.
+
+`carrier.balance.read` is deliberately unsupported. The archived USSD attempt
+timed out on this variant; neither a firmware menu nor the existence of HTTP
+USSD commands establishes working consultation. `GET /api/devices/{id}/balance`
+returns 501 immediately, without inspecting or modifying the device. A future
+implementation needs model/variant protocol coverage, fresh-response and
+session ownership checks, shared SMS/USSD serialization and opt-in hardware
+verification. Existing sessions must never be cancelled as implicit recovery.
 
 Settings belong to this integration: `ZteMf833tSettings(base_url, timeout_seconds)`.
 The URL defaults to `http://192.168.0.1`; timeout defaults to three seconds and
