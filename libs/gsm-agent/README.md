@@ -48,3 +48,13 @@ normalization, splitting and limits for both live sending and dry-run previews.
 `GetAssistantStatus` and `ListReplyJobs` are queries over local workflow state.
 
 Python import: `gsm_agent`.
+
+`ConsultBalance` is a Mediary query over `carrier.balance.read`. It checks support
+before acquiring a session, uses a configured reviewed carrier consultation
+policy, and shares one deadline across ownership acquisition and response I/O.
+It never follows a menu or retries. An acquired session is released on success,
+failure, timeout and cancellation, with an additional bounded cleanup budget.
+Foreign-session errors do not call cleanup because no handle was acquired.
+Cleanup failure prevents a successful result; an existing failure keeps its
+original classification. Carrier parsers, if implemented by an adapter, must
+preserve raw text and distinguish unknown credit/allowance from observed zero.

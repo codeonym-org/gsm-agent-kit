@@ -4,8 +4,8 @@ Framework-independent domain types and capability contracts.
 
 Owns immutable device IDs, model and adapter manifests, descriptors, status
 observations, inbox source/observation schemas and canonical typed capability lookup.
-Implemented capabilities are `device.status.read`, `sms.inbox.read` and `sms.send`; USSD and other capabilities will be added alongside
-their behavioral contracts rather than advertised ahead of implementation.
+Implemented contracts are `device.status.read`, `sms.inbox.read`, `sms.send` and
+`carrier.balance.read`. Each adapter binds only the capabilities it implements.
 
 Support and availability are separate: lookup returns a supported port even
 when its status is unavailable. Bindings are immutable, use canonical catalog
@@ -31,3 +31,12 @@ reasons; replies require nonempty text. Framework messages, provider clients,
 credentials and conversation persistence stay outside the port.
 
 Python import: `gsm_agent_core`.
+
+`BalanceReader.reserve()` returns an exclusive `BalanceSession` without sending
+USSD. The session consults a reviewed carrier policy once and releases only its
+own reservation. A foreign session is busy, never implicitly cancelled.
+Adapters own protocol decoding, response freshness and uncertain-session gating.
+`BalanceObservation` preserves raw text and a timezone-aware observation time;
+optional `CreditBalance` and `SmsAllowance` are distinct, with conditions intact.
+Missing parsed values are `None`, not zero. No generic USSD execution or menu
+continuation capability is exposed. The ZTE adapter does not bind this contract.

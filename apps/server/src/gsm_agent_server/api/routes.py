@@ -3,15 +3,17 @@ from typing import Annotated
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from gsm_agent.application.commands.ingest_inbox import IngestInbox
 from gsm_agent.application.commands.send_sms import SendSms
+from gsm_agent.application.queries.balance import ConsultBalance
 from gsm_agent.application.queries.devices import GetDevice, GetDeviceStatus, ListAdapters, ListDevices
 from gsm_agent.application.queries.inbox import ListStoredMessages
 from gsm_agent.application.queries.replies import AssistantStatus, GetAssistantStatus, ListReplyJobs
 from gsm_agent.application.queries.submissions import GetSubmission
 from gsm_agent.application.replies import ReplyJobStatus
+from gsm_agent_core.domain.balance import BalanceObservation
 from gsm_agent_core.domain.devices import CellularDeviceId
 from gsm_agent_core.domain.submission import SmsDestination
 from mediary.cqrs import CommandSender, QuerySender
@@ -76,6 +78,18 @@ async def device(device_id: DeviceIdPath, queries: FromDishka[QuerySender]) -> D
 )
 async def status(device_id: DeviceIdPath, queries: FromDishka[QuerySender]) -> StatusResponse:
     return StatusResponse.from_domain(await queries.send(GetDeviceStatus(CellularDeviceId(device_id))))
+
+
+@router.get(
+    "/devices/{device_id}/balance",
+    description="Consult the configured carrier without following menus. No arbitrary USSD input.",
+    responses={code: {"model": ErrorResponse} for code in (404, 409, 501, 502, 503, 504)},
+)
+async def balance(
+    device_id: DeviceIdPath, response: Response, queries: FromDishka[QuerySender]
+) -> BalanceObservation:
+    response.headers["Cache-Control"] = "no-store"
+    return await queries.send(ConsultBalance(CellularDeviceId(device_id)))
 
 
 @router.get(

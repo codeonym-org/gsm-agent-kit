@@ -6,7 +6,9 @@ The MF833T adapter records variant-specific verification evidence. Incoming SMS
 snapshots, durable ingestion, source baselines and stored-message queries are also
 implemented. Typed SMS submission, durable attempts/progress and bounded plain-text
 preparation are implemented too. Structured OpenRouter replies and bounded persistent
-conversations are implemented. USSD remains a proposed contract for a subsequent slice.
+conversations are implemented. Bounded carrier balance queries and exclusive
+consultation contracts are implemented, with opt-in simulation. The ZTE adapter
+does not offer working balance/USSD support; it returns unsupported immediately.
 `.v0` supplies reference behavior, not the new public contracts.
 
 Domain terms follow the root [glossary](../../GLOSSARY.md). The glossary defines
@@ -148,7 +150,7 @@ Proposed initial catalog:
 | `sms.send` | `SmsSender` | Submit one prepared single-segment SMS and report the submission outcome |
 | `sms.inbox.read` | `SmsInbox` | Read complete and incomplete observations without marking read or deleting; only complete observations can be replyable |
 | `device.status.read` | `DeviceStatusReader` | Return normalized observations with explicit unknown values |
-| `ussd.exchange` | `UssdClient` | Start one exchange, collect its response and release the session |
+| `carrier.balance.read` | `BalanceReader` | Reserve ownership, consult a reviewed policy once and release the owned session |
 
 Relevant constraints include supported SMS encodings and segment limits, inbox
 storage coverage, and USSD response support. Constraints are defined per
@@ -261,15 +263,21 @@ is no need to require an event stream from every cellular device to implement li
 
 ## Balance consultation and CQRS
 
-Balance is carrier policy, not a universal cellular device primitive. The application
-maps a configured carrier consultation to `UssdClient.exchange()` and returns
-raw carrier text, observation time and an explicit parsing status. Structured
+Balance uses carrier policy, not an arbitrary cellular-device USSD primitive.
+The implemented capability is intentionally narrower than the originally proposed
+`ussd.exchange`: no current caller needs arbitrary USSD or continuation. The
+application selects a reviewed `BalanceCarrier` and obtains a reservation from
+`BalanceReader.reserve()` before invoking `BalanceSession.consult(carrier)`.
+The adapter owns protocol encoding, fresh-response checks and exclusive device
+ownership. Reservation sends no USSD; cancellation before a handle is returned
+must release any local ownership. The query returns raw carrier text and
+observation time. Null parsed fields explicitly indicate unknown values. Structured
 credit balance or SMS allowance values are optional and require a recognized
 response. Preserve currency and reported validity/scope conditions; a monetary
 balance and an SMS allowance are separate observations. Do not invent a numeric
 zero when parsing fails.
 
-`GetBalance` is a query: it observes account information using the configured
+`ConsultBalance` is a query: it observes account information using the configured
 consultation code. Starting and cleaning up a transient USSD session does not
 turn that business operation into a command. Query inputs cannot accept an
 arbitrary USSD code or follow purchase menus.
@@ -284,6 +292,20 @@ is active, return busy rather than cancelling someone else's operation.
 Responses requiring a menu selection are returned as such, with no automatic
 selection, and the owned session is released. Interactive session continuation
 requires a separate future interface.
+
+The application deadline includes reservation and response I/O. A separately
+bounded cleanup runs on every exit after reservation, including cancellation.
+Only the returned handle can release the owned session; cleanup failure must
+keep uncertain network ownership busy for later calls. Default budgets are
+30 seconds plus 2 seconds cleanup. A foreign-session busy error returns without
+cleanup. Cleanup failure prevents success but does not replace an earlier
+consultation failure. All adapter methods must cooperate with cancellation.
+
+The simulated adapter offers this capability only by explicit opt-in and only
+for the `simulated` carrier policy. The MF833T binds no balance port, given its
+unresolved firmware USSD timeout. The server returns 501 before device I/O.
+The `inwi` policy fixes the consultation code to `*120*30#`; this does not
+establish that a device supports it. Neither policy can navigate purchase menus.
 
 The HTTP transport must distinguish unsupported consultation, unavailable
 device/carrier, busy session and deadline expiry. Increasing a timeout is not

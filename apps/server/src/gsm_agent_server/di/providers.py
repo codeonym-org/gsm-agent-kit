@@ -6,6 +6,7 @@ from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.ports.inbox import InboxStore
 from gsm_agent.application.ports.replies import ReplyStore
 from gsm_agent.application.ports.submissions import SubmissionStore
+from gsm_agent.application.queries.balance import BalancePolicy
 from gsm_agent.application.queries.devices import DeviceQueryPolicy
 from gsm_agent.application.replies import ReplyCoordinator, ReplyPolicy
 from gsm_agent.application.submissions import SubmissionCoordinator, SubmissionDisabledError, SubmissionPolicy
@@ -21,6 +22,11 @@ from gsm_agent_server.runtime.settings import DeviceSettings, Settings
 
 class DeviceProvider(Provider):
     scope = Scope.APP
+
+    @provide
+    def balance_policy(self, settings: Settings) -> BalancePolicy:
+        config = settings.balance
+        return BalancePolicy(config.carrier, config.timeout_seconds, config.cleanup_timeout_seconds)
 
     @provide
     def reply_policy(self, settings: Settings) -> ReplyPolicy:
@@ -158,6 +164,10 @@ def _create_device(config: DeviceSettings) -> CellularDevice:
             )
         from gsm_agent_simulated import SimulatedDevice
 
-        return SimulatedDevice(CellularDeviceId(config.id), availability=config.simulated_availability)
+        return SimulatedDevice(
+            CellularDeviceId(config.id),
+            availability=config.simulated_availability,
+            balance_enabled=config.simulated_balance_enabled,
+        )
     except ImportError as exc:
         raise RuntimeError(f"Install gsm-agent-server[{config.adapter}] to use this adapter") from exc
