@@ -29,7 +29,8 @@ tests/e2e/            Assembled-system tests
 The Python workspace has 13 packages. Device inspection is implemented through
 core contracts, Mediary query handlers, Dishka composition, a simulated adapter
 and the model-specific ZTE MF833T HTTP adapter.
-The remaining integrations, SMS workflows and browser UI are being built as
+Incoming SMS ingestion is implemented with source baselines, a SQLite ledger
+and durable events. Outgoing SMS, AI replies, remaining integrations and browser UI are being built as
 [implementation tickets](https://github.com/orgs/codeonym-org/projects/2).
 Each package owns its dependencies, README, source namespace, typing marker and tests.
 
@@ -51,9 +52,20 @@ GSM_DEVICE__ADAPTER=zte-mf833t GSM_DEVICE__ID=zte-device \
 ```
 
 Inspect `/api/devices/zte-device` and `/api/devices/zte-device/status`. This
-profile reads model, firmware, hardware revision and network status; SMS and
-USSD operations are subsequent slices. The host needs network access to the
+profile reads model, firmware, hardware revision and network status. The host needs network access to the
 management interface, which defaults to `http://192.168.0.1`.
+
+To enable durable incoming SMS polling:
+
+```bash
+GSM_DEVICE__ADAPTER=zte-mf833t GSM_DEVICE__ID=zte-device GSM_INBOX__ENABLED=true \
+  uv run --package gsm-agent-server --extra zte-mf833t --extra inbox gsm-agent-server
+```
+
+Read `/api/devices/zte-device/messages`. The first scan records the existing
+inbox as backlog; later complete messages become eligible for processing.
+The application does not send replies yet. See the server README for storage
+and subscription generation settings before replacing a SIM or device.
 
 ## Develop
 
@@ -70,10 +82,10 @@ membership, linting and test discovery. Select a package when working on it,
 for example `uv run --package gsm-agent-core python`.
 
 The `gsm-agent-kit` package declares installation extras: `server`, `cli`,
-`zte-mf833t`, `zte-http`, `serial-at`, `modemmanager`, `langchain`, and `sqlite`.
+`zte-mf833t`, `inbox`, `zte-http`, `serial-at`, `modemmanager`, `langchain`, and `sqlite`.
 `zte-mf833t` installs the server and model-specific adapter. The server also
-offers a separate `simulated` extra. Other device, AI and storage extras still
-select scaffold packages.
+offers separate `simulated` and `inbox` extras. `inbox` installs the SQLite
+integration; combine it with a device profile. Other device and AI extras still select scaffold packages.
 No packages or images have been published.
 
 See [the proposed monorepo layout](docs/monorepo-layout.md) for the planned

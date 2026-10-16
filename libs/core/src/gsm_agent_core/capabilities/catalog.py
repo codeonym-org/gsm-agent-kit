@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Final, Generic, TypeVar, cast
 
+from gsm_agent_core.capabilities.inbox import SmsInbox
 from gsm_agent_core.capabilities.status import DeviceStatusReader
 from gsm_agent_core.domain.devices import CapabilityId
 
@@ -18,7 +19,8 @@ class CapabilityKey(Generic[P_co]):
 DEVICE_STATUS_READ: CapabilityKey[DeviceStatusReader] = CapabilityKey(
     CapabilityId.DEVICE_STATUS_READ, DeviceStatusReader
 )
-CAPABILITIES: Final[tuple[CapabilityKey[object], ...]] = (DEVICE_STATUS_READ,)
+SMS_INBOX_READ: CapabilityKey[SmsInbox] = CapabilityKey(CapabilityId.SMS_INBOX_READ, SmsInbox)
+CAPABILITIES: Final[tuple[CapabilityKey[object], ...]] = (DEVICE_STATUS_READ, SMS_INBOX_READ)
 
 
 @dataclass(frozen=True, slots=True)

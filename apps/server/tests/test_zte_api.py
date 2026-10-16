@@ -48,7 +48,7 @@ async def test_configured_zte_profile_uses_the_real_composition_and_query_path(m
             adapters = (await api.get("/api/adapters")).json()
             assert adapters[0]["adapter_id"] == "zte-mf833t"
             assert adapters[0]["version"] == MANIFEST.version
-            assert adapters[0]["capabilities"] == ["device.status.read"]
+            assert adapters[0]["capabilities"] == ["device.status.read", "sms.inbox.read"]
             assert adapters[0]["required_transports"] == ["http-management"]
             descriptor = (await api.get("/api/devices/zte-device")).json()
             assert descriptor["observation"]["variant"]["firmware"] == "fictional-firmware"

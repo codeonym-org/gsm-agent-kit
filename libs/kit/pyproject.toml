@@ -36,3 +36,6 @@ sqlite = ['gsm-agent-sqlite']
 zte-mf833t = [
     "gsm-agent-server[zte-mf833t]",
 ]
+inbox = [
+    "gsm-agent-server[inbox]",
+]

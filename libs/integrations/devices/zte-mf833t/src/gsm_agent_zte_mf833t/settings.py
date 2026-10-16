@@ -7,6 +7,11 @@ from urllib.parse import urlsplit
 class ZteMf833tSettings:
     base_url: str = "http://192.168.0.1"
     timeout_seconds: float = 3
+    inbox_timeout_seconds: float = 10
+    page_size: int = 50
+    max_pages: int = 100
+    storage_generation: str = "initial"
+    subscription_generation: str = "initial"
 
     def __post_init__(self) -> None:
         url = urlsplit(self.base_url)
@@ -26,3 +31,12 @@ class ZteMf833tSettings:
             raise ValueError("Invalid ZTE base URL port") from exc
         if not math.isfinite(self.timeout_seconds) or not 0 < self.timeout_seconds <= 30:
             raise ValueError("ZTE timeout must be finite, positive and at most 30 seconds")
+        if not math.isfinite(self.inbox_timeout_seconds) or not 0 < self.inbox_timeout_seconds <= 120:
+            raise ValueError("ZTE inbox timeout must be finite, positive and at most 120 seconds")
+        if not 1 <= self.page_size <= 500 or not 1 <= self.max_pages <= 1000:
+            raise ValueError("Invalid inbox pagination limits")
+        if any(
+            not value.strip() or len(value) > 128
+            for value in (self.storage_generation, self.subscription_generation)
+        ):
+            raise ValueError("Inbox generations must contain 1–128 characters")

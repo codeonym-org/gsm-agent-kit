@@ -6,7 +6,11 @@ readme = "README.md"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
-dependencies = ['gsm-agent-core', 'gsm-agent']
+dependencies = [
+    'gsm-agent-core',
+    'gsm-agent',
+    "aiosqlite>=0.21.0",
+]
 
 [build-system]
 requires = ["hatchling"]
