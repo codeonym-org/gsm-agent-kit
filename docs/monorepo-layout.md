@@ -17,6 +17,7 @@ gsm-agent-kit/
     integrations/
       devices/
         simulated/              # gsm-agent-simulated: deterministic development device
+        zte-mf833t/             # gsm-agent-zte-mf833t: model-specific HTTP integration
       modems/
         zte-http/               # gsm-agent-zte-http
         serial-at/              # gsm-agent-serial-at
@@ -46,15 +47,15 @@ gsm-agent-kit/
   uv.lock                       # development workspace lock
 ```
 
-Device inspection now works with the simulated adapter through the server.
-The remaining physical-device and workflow packages are scaffolds.
+Device inspection works with the simulated and ZTE MF833T adapters through the
+server. Other physical-device and workflow packages remain scaffolds.
 Package-name availability on PyPI is unverified.
 
 ## Package conventions
 
 Every implemented Python library has its own `pyproject.toml`, `README.md`,
 `src/<unique_import_package>/`, `tests/`, and typing marker where applicable.
-For example, ZTE code lives under `src/gsm_agent_zte_http/`; it does not extend
+For example, MF833T code lives under `src/gsm_agent_zte_mf833t/`; it does not extend
 another distribution's `gsm_agent` directory. Dependency declarations determine
 what a consumer installs. Use a uv workspace for coordinated local development;
 deployment installs the selected application and integrations rather than every
@@ -69,8 +70,8 @@ those installation and transport requirements; adapter identity is separate
 from image identity.
 
 The existing `modems/zte-http`, `serial-at` and `modemmanager` directories are
-protocol-oriented scaffolds. The next integration-layout revision must provide
-model-specific adapters and a broader cellular-device grouping. They do not
+protocol-oriented scaffolds. Model-specific adapters now live under the broader
+`devices` grouping, starting with `zte-mf833t`. The protocol scaffolds do not
 currently supply generic working adapters for arbitrary models. The tree above
 records the current filesystem, not the final device taxonomy.
 

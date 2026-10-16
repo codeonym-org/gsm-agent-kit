@@ -26,6 +26,42 @@ class Availability(StrEnum):
     UNKNOWN = "unknown"
 
 
+class Compatibility(StrEnum):
+    UNKNOWN = "unknown"
+    UNTESTED = "untested"
+    VERIFIED = "verified"
+    MISMATCH = "mismatch"
+
+
+class VerificationKind(StrEnum):
+    PROTOCOL_FIXTURE = "protocol_fixture"
+    DEVICE_VERIFICATION = "device_verification"
+
+
+class DeviceReadIssue(StrEnum):
+    OFFLINE = "offline"
+    TIMEOUT = "timeout"
+    AUTH_REQUIRED = "auth_required"
+    INVALID_RESPONSE = "invalid_response"
+    MODEL_MISMATCH = "model_mismatch"
+    IDENTITY_UNKNOWN = "identity_unknown"
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceVariant:
+    firmware: str | None = None
+    hardware_revision: str | None = None
+    operating_mode: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CompatibilityEvidence:
+    variant: DeviceVariant
+    kind: VerificationKind
+    reference: str
+    capabilities: tuple[CapabilityId, ...] = ()
+
+
 @dataclass(frozen=True, slots=True)
 class DeviceModel:
     manufacturer: str
@@ -42,6 +78,9 @@ class AdapterManifest:
     version: str
     model: DeviceModel
     capabilities: tuple[CapabilityId, ...]
+    required_transports: tuple[str, ...] = ()
+    runtime_dependencies: tuple[str, ...] = ()
+    compatibility_evidence: tuple[CompatibilityEvidence, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.adapter_id.strip() or not self.version.strip():
@@ -51,9 +90,24 @@ class AdapterManifest:
 
 
 @dataclass(frozen=True, slots=True)
+class DeviceObservation:
+    observed_at: datetime
+    availability: Availability
+    compatibility: Compatibility
+    observed_model: str | None = None
+    variant: DeviceVariant | None = None
+    issue: DeviceReadIssue | None = None
+
+    def __post_init__(self) -> None:
+        if self.observed_at.utcoffset() is None:
+            raise ValueError("Observation time must include a timezone")
+
+
+@dataclass(frozen=True, slots=True)
 class DeviceDescriptor:
     device_id: CellularDeviceId
     adapter: AdapterManifest
+    observation: DeviceObservation | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +117,7 @@ class DeviceStatus:
     network_provider: str | None = None
     network_type: str | None = None
     signal_percent: int | None = None
+    issue: DeviceReadIssue | None = None
 
     def __post_init__(self) -> None:
         if self.observed_at.utcoffset() is None:

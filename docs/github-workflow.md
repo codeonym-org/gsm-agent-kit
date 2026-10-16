@@ -24,7 +24,7 @@ acli-py. Release tags matching `v*` are immutable.
 ## Automation
 
 The workflows, conventions and templates originate from codeonym-oss/acli-py.
-CI is adapted to the 12-package workspace and Python 3.13+, with Linux,
+CI is adapted to the 13-package workspace and Python 3.13+, with Linux,
 macOS and Windows package/import checks. Modem hardware is not required in CI.
 Build checks validate all wheels and source distributions and their metadata.
 Behavior tests cover the implemented device-inspection slice and run without

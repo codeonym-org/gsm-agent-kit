@@ -18,10 +18,10 @@ jobs:
           uv pip install --python /tmp/gsm-smoke -r /tmp/gsm-dependencies.txt
           uv pip install --python /tmp/gsm-smoke --no-index --no-deps dist/*.whl
           uv pip check --python /tmp/gsm-smoke
-          /tmp/gsm-smoke/bin/python -c 'import gsm_agent_core, gsm_agent, gsm_agent_kit, gsm_agent_server, gsm_agent_cli, gsm_agent_zte_http, gsm_agent_serial_at, gsm_agent_modemmanager, gsm_agent_langchain, gsm_agent_sqlite, gsm_agent_standard_tests, gsm_agent_simulated'
+          /tmp/gsm-smoke/bin/python -c 'import gsm_agent_core, gsm_agent, gsm_agent_kit, gsm_agent_server, gsm_agent_cli, gsm_agent_zte_http, gsm_agent_serial_at, gsm_agent_modemmanager, gsm_agent_langchain, gsm_agent_sqlite, gsm_agent_standard_tests, gsm_agent_simulated, gsm_agent_zte_mf833t'
           uv pip install --python /tmp/gsm-smoke hatchling
           uv pip install --python /tmp/gsm-smoke --no-deps --no-build-isolation --force-reinstall dist/*.tar.gz
-          /tmp/gsm-smoke/bin/python -c 'import gsm_agent_core, gsm_agent, gsm_agent_kit, gsm_agent_server, gsm_agent_cli, gsm_agent_zte_http, gsm_agent_serial_at, gsm_agent_modemmanager, gsm_agent_langchain, gsm_agent_sqlite, gsm_agent_standard_tests, gsm_agent_simulated'
+          /tmp/gsm-smoke/bin/python -c 'import gsm_agent_core, gsm_agent, gsm_agent_kit, gsm_agent_server, gsm_agent_cli, gsm_agent_zte_http, gsm_agent_serial_at, gsm_agent_modemmanager, gsm_agent_langchain, gsm_agent_sqlite, gsm_agent_standard_tests, gsm_agent_simulated, gsm_agent_zte_mf833t'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dist

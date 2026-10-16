@@ -179,6 +179,16 @@
           "type": "toml",
           "path": "uv.lock",
           "jsonpath": "$.package[?(@.name.value=='gsm-agent-simulated')].version"
+        },
+        {
+          "type": "toml",
+          "path": "libs/integrations/devices/zte-mf833t/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='gsm-agent-zte-mf833t')].version"
         }
       ]
     }

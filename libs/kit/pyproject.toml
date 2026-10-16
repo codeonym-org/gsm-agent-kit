@@ -17,13 +17,13 @@ packages = ["src/gsm_agent_kit"]
 
 [tool.uv.sources]
 gsm-agent = { workspace = true }
-gsm-agent-server = { workspace = true }
 gsm-agent-cli = { workspace = true }
 gsm-agent-zte-http = { workspace = true }
 gsm-agent-serial-at = { workspace = true }
 gsm-agent-modemmanager = { workspace = true }
 gsm-agent-langchain = { workspace = true }
 gsm-agent-sqlite = { workspace = true }
+gsm-agent-server = { workspace = true }
 
 [project.optional-dependencies]
 server = ['gsm-agent-server']
@@ -33,3 +33,6 @@ serial-at = ['gsm-agent-serial-at']
 modemmanager = ['gsm-agent-modemmanager']
 langchain = ['gsm-agent-langchain']
 sqlite = ['gsm-agent-sqlite']
+zte-mf833t = [
+    "gsm-agent-server[zte-mf833t]",
+]
