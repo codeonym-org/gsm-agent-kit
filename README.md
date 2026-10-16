@@ -1,6 +1,7 @@
 # GSM Agent Kit
 
-A modem-independent GSM toolkit monorepo under development.
+A toolkit for SIM-capable cellular devices and capability-based workflows,
+under development.
 
 Public source, **all rights reserved**. See [LICENSE](LICENSE) and
 [third-party notices](NOTICE).
@@ -15,7 +16,7 @@ Public source, **all rights reserved**. See [LICENSE](LICENSE) and
 libs/                 Independently packaged Python libraries
   core/               Domain and capability contracts
   gsm-agent/          Application workflows and CQRS
-  integrations/       Modem, AI and storage integrations
+  integrations/       Cellular device, AI and storage integrations
   standard-tests/     Shared integration contract tests
   kit/                Optional installation bundles
 apps/                 Server, CLI and browser UI
@@ -25,10 +26,21 @@ tests/e2e/            Assembled-system tests
 .v0/                  Archived reference implementation
 ```
 
-The Python workspace has 11 scaffold packages. Each owns its dependencies,
-README, source namespace, typing marker and test directory. Adapters and apps
-are not operational yet; frontend tooling and deployment recipes are deferred
-until their design is agreed.
+The Python workspace has 12 packages. Device inspection is implemented through
+core contracts, Mediary query handlers, Dishka composition and a simulated adapter.
+The remaining integrations, SMS workflows and browser UI are being built as
+[implementation tickets](https://github.com/orgs/codeonym-org/projects/2).
+Each package owns its dependencies, README, source namespace, typing marker and tests.
+
+## Run the first slice
+
+```bash
+uv run --package gsm-agent-server --extra simulated gsm-agent-server
+```
+
+Open http://127.0.0.1:8000/docs to list adapters, inspect `demo-device` and read
+its status. This profile performs no hardware access or outgoing SMS submissions.
+See [server configuration and API examples](apps/server/README.md).
 
 ## Develop
 
@@ -36,6 +48,8 @@ until their design is agreed.
 uv sync --all-packages --all-extras
 uv run ruff check .
 uv run ruff format --check .
+uv run pyright
+uv run python scripts/run_tests.py
 ```
 
 `uv.lock` coordinates local development. `.v0` is excluded from workspace
@@ -43,12 +57,17 @@ membership, linting and test discovery. Select a package when working on it,
 for example `uv run --package gsm-agent-core python`.
 
 The `gsm-agent-kit` package declares installation extras: `server`, `cli`,
-`zte-http`, `serial-at`, `modemmanager`, `langchain`, and `sqlite`. These currently
-select scaffold packages; they do not yet provide modem drivers or services.
+`zte-http`, `serial-at`, `modemmanager`, `langchain`, and `sqlite`. The server
+supports device inspection with its separate `simulated` extra; physical-device,
+AI and storage extras currently select scaffold packages.
 No packages or images have been published.
 
 See [the proposed monorepo layout](docs/monorepo-layout.md) for the planned
 libraries, integrations, applications, and deployment structure.
+
+The [domain glossary](GLOSSARY.md) defines the shared terminology. The
+[cellular device interface proposal](docs/design/cellular-device-interface.md) applies that language
+to capability contracts and records scenarios the new implementation must handle.
 
 The original working draft is preserved in [`.v0/`](.v0/README.md) as a reference
 for the new implementation. Its source, tests, scripts, dependency metadata,

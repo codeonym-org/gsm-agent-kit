@@ -1,1 +1,1 @@
-"""Framework-independent domain types and capability contracts. Implementation pending."""
+"""Framework-independent cellular device schemas and capability ports."""

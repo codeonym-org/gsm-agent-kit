@@ -169,6 +169,16 @@
           "type": "toml",
           "path": "uv.lock",
           "jsonpath": "$.package[?(@.name.value=='gsm-agent-server')].version"
+        },
+        {
+          "type": "toml",
+          "path": "libs/integrations/devices/simulated/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='gsm-agent-simulated')].version"
         }
       ]
     }

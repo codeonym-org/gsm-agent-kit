@@ -8,11 +8,12 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["libs/core", "libs/gsm-agent", "libs/standard-tests", "libs/kit", "libs/integrations/modems/*", "libs/integrations/ai/*", "libs/integrations/storage/*", "apps/server", "apps/cli"]
+members = ["libs/core", "libs/gsm-agent", "libs/standard-tests", "libs/kit", "libs/integrations/devices/*", "libs/integrations/modems/*", "libs/integrations/ai/*", "libs/integrations/storage/*", "apps/server", "apps/cli"]
 
 [dependency-groups]
 dev = [
     "commitizen>=4.19.2",
+    "httpx>=0.28.1",
     "pyright>=1.1.414",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -39,7 +40,7 @@ name = "cz_conventional_commits"
 allowed_prefixes = ["Merge", "Revert", "fixup!", "squash!"]
 
 [tool.pyright]
-include = ["libs", "apps/server/src", "apps/cli/src", "scripts"]
+include = ["libs", "apps/server", "apps/cli/src", "scripts"]
 exclude = [".v0", ".venv", "**/node_modules"]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
