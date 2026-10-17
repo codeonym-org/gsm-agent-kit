@@ -9,6 +9,8 @@ dist/
 *.egg-info/
 build/
 node_modules/
+playwright-report/
+test-results/
 .env.*
 !.env.example
 .agents/

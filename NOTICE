@@ -1,3 +1,9 @@
 GitHub workflow conventions, issue/PR templates and scripts/check_branch_name.py
 are adapted from codeonym-oss/acli-py. Its MIT notice is preserved in
 third_party/acli-py-LICENSE. These third-party terms remain applicable to that material.
+
+The browser build includes React, Radix, shadcn/ui components, Lucide icons,
+React Router, tRPC and their runtime dependencies. Applicable third-party license
+texts are preserved in apps/web/public/third-party-notices.txt and included in
+the static build. These terms remain applicable to the third-party material;
+the project's original code remains all rights reserved.

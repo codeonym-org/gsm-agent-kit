@@ -109,5 +109,10 @@ It is a design proposal, not an implemented or finalized contract.
 
 Deployment image/profile selection follows integration dependencies and transport
 access requirements. Mounting installation media does not expose device interfaces.
-Frontend packaging uses its own JavaScript tooling if that stack is selected;
-it is not a Python workspace member.
+The browser console uses React, TypeScript, shadcn/ui and Vite under `apps/web`,
+with a root pnpm workspace/lockfile. It consumes generated OpenAPI types and
+existing HTTP endpoints. Its `server/` directory hosts a tRPC WebSocket gateway
+that forwards authenticated Python change invalidations; CQRS and device ownership
+remain in Python. It is not a Python workspace member. Production assets are a
+separate static build; the gateway is an additional Node process. Playwright composes the real API/workflows/SQLite with
+simulated device and AI ports for assembled-system coverage.
