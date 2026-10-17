@@ -88,6 +88,9 @@ capabilities, observed status, inbox, assistant mode and submission progress.
 With the backend running, use `pnpm install --frozen-lockfile` and `pnpm web:dev`
 from the repository root, then open http://127.0.0.1:5173. It uses the existing
 API and offers SMS/balance actions only when the adapter implements them.
+The SPA uses shadcn/ui and routed overview, inbox, workflow and device screens.
+`pnpm web:dev` also starts its tRPC WebSocket gateway for live inbox and reply
+updates. Proxy settings come from root `.env`; see the web README for defaults.
 pnpm is pinned in root `package.json`; no provider credentials go in the UI.
 
 ## Develop

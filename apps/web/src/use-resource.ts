@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "./api/client";
+import { useRealtime } from "./realtime";
 
 export type Resource<T> = {
   data?: T;
@@ -12,16 +13,18 @@ export function useResource<T>(
   load: (signal: AbortSignal) => Promise<T>,
   revision: number,
   active = true,
-  interval = 5_000,
+  interval = 30_000,
 ): Resource<T> {
+  const { revision: liveRevision } = useRealtime();
+  const observedRevision = revision + liveRevision;
   const [resource, setResource] = useState<Resource<T> & { load: typeof load; revision: number }>({
     loading: active,
     load,
-    revision,
+    revision: observedRevision,
   });
   useEffect(() => {
     if (!active) {
-      setResource({ loading: false, load, revision });
+      setResource({ loading: false, load, revision: observedRevision });
       return;
     }
     let disposed = false;
@@ -30,7 +33,14 @@ export function useResource<T>(
     const poll = async () => {
       try {
         const data = await load(controller.signal);
-        if (!disposed) setResource({ data, loading: false, updatedAt: new Date(), load, revision });
+        if (!disposed)
+          setResource({
+            data,
+            loading: false,
+            updatedAt: new Date(),
+            load,
+            revision: observedRevision,
+          });
       } catch (error) {
         if (!disposed) {
           const failure =
@@ -38,7 +48,7 @@ export function useResource<T>(
           setResource((previous) => ({
             ...(failure.status === 401 ? {} : previous),
             load,
-            revision,
+            revision: observedRevision,
             loading: false,
             error: failure,
           }));
@@ -50,7 +60,7 @@ export function useResource<T>(
       ...(previous.load === load ? previous : {}),
       loading: true,
       load,
-      revision,
+      revision: observedRevision,
     }));
     void poll();
     return () => {
@@ -58,6 +68,6 @@ export function useResource<T>(
       controller.abort();
       clearTimeout(timer);
     };
-  }, [load, revision, active, interval]);
+  }, [load, observedRevision, active, interval]);
   return resource.load === load ? resource : { loading: active };
 }

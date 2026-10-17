@@ -29,6 +29,7 @@ from gsm_agent_core.domain.balance import BalanceIssue, BalanceReadError
 from gsm_agent_core.domain.devices import DeviceReadIssue
 from gsm_agent_core.domain.sms import InboxReadError
 
+from gsm_agent_server.api.realtime import router as realtime_router
 from gsm_agent_server.api.routes import router
 from gsm_agent_server.di.container import build_container
 from gsm_agent_server.runtime.inbox import poll_inboxes
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
     app.state.settings = config
     setup_dishka(container=container, app=app)
     app.include_router(router)
+    app.include_router(realtime_router)
 
     async def query_error(request: Request, exc: Exception) -> JSONResponse:
         if isinstance(exc, UnsupportedCapabilityError):

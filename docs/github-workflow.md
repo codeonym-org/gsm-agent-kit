@@ -34,7 +34,8 @@ must add corresponding behavioral coverage.
 
 The `web` CI job installs the pinned pnpm workspace, checks generated OpenAPI
 types for drift, lints/type-checks/builds the console, and runs Playwright against
-the real backend with simulated device and AI ports. It is required by `ci-ok`.
+the real backend with simulated device and AI ports plus the actual tRPC
+WebSocket gateway. Reconnect, authorization and SPA navigation are covered. It is required by `ci-ok`.
 Browser traces/screenshots are uploaded only on failure using synthetic fixture
 data. Dependabot's npm ecosystem entry manages `pnpm-lock.yaml`.
 

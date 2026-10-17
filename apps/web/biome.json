@@ -3,11 +3,31 @@
   "files": {
     "includes": ["**", "!src/api/schema.d.ts", "!playwright-report", "!test-results", "!dist"]
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "lineWidth": 100 },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100
+  },
   "linter": {
     "enabled": true,
-    "rules": { "preset": "recommended", "style": { "noDescendingSpecificity": "off" } }
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noDescendingSpecificity": "off"
+      }
+    }
   },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
-  "css": { "parser": { "cssModules": false } }
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  }
 }

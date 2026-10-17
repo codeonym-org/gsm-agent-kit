@@ -1,8 +1,14 @@
+import { Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Resource } from "../use-resource";
+import { Badge as UiBadge } from "./ui/badge";
 
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: string }) {
-  return <span className={`badge ${tone}`}>{children}</span>;
+  return (
+    <UiBadge variant="outline" className={`badge ${tone}`}>
+      {children}
+    </UiBadge>
+  );
 }
 
 export function Feedback({ resource }: { resource: Resource<unknown> }) {
@@ -26,7 +32,7 @@ export function Empty({ title, children }: { title: string; children: ReactNode 
   return (
     <div className="empty">
       <span className="empty-mark" aria-hidden="true">
-        ↳
+        <Inbox size={22} strokeWidth={1.5} />
       </span>
       <h3>{title}</h3>
       <p>{children}</p>

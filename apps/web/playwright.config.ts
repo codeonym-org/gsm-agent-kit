@@ -19,6 +19,13 @@ export default defineConfig({
   },
   webServer: [
     {
+      command: "pnpm realtime",
+      url: "http://127.0.0.1:3002",
+      env: { GSM_API_PROXY_TARGET: "http://127.0.0.1:8765", GSM_REALTIME_PORT: "3002" },
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
       command: "uv run --project ../.. --no-sync python ../../tests/e2e/console_backend.py",
       url: "http://127.0.0.1:8765/__fixture__/ready",
       reuseExistingServer: false,
@@ -27,7 +34,10 @@ export default defineConfig({
     {
       command: "pnpm exec vite preview --host 127.0.0.1 --port 4173",
       url: "http://127.0.0.1:4173",
-      env: { GSM_API_PROXY_TARGET: "http://127.0.0.1:8765" },
+      env: {
+        GSM_API_PROXY_TARGET: "http://127.0.0.1:8765",
+        GSM_REALTIME_PROXY_TARGET: "http://127.0.0.1:3002",
+      },
       reuseExistingServer: false,
       timeout: 30_000,
     },

@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type ApiClient, ApiError, type Submission } from "../api/client";
 import { useResource } from "../use-resource";
 import { Badge, Feedback, labels, outcomeTone, time } from "./shared";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 
 export function SubmissionProgress({ record }: { record: Submission }) {
   return (
@@ -82,9 +85,9 @@ export function SubmissionLookup({
           <p className="eyebrow">Submission record</p>
           <h2>Request progress</h2>
         </div>
-        <button type="button" className="button ghost" onClick={close}>
+        <Button type="button" variant="ghost" onClick={close}>
           Close
-        </button>
+        </Button>
       </div>
       <code className="request-id">{requestId}</code>
       <Feedback resource={progress} />
@@ -167,7 +170,7 @@ export function ManualSubmission({
             Submit an SMS directly. Assistant dry-run settings apply only to automatic replies.
           </p>
           <label htmlFor="destination">Destination</label>
-          <input
+          <Input
             id="destination"
             type="tel"
             placeholder="+212…"
@@ -178,7 +181,7 @@ export function ManualSubmission({
             autoComplete="off"
           />
           <label htmlFor="sms-text">Message</label>
-          <textarea
+          <Textarea
             id="sms-text"
             rows={6}
             placeholder="Write a message…"
@@ -191,18 +194,14 @@ export function ManualSubmission({
             <span>{text.length.toLocaleString()} characters</span>
             <span>Server SMS limits apply</span>
           </div>
-          <button
-            className="button primary wide"
-            type="submit"
-            disabled={!text.trim() || !destination}
-          >
+          <Button className="w-full" type="submit" disabled={!text.trim() || !destination}>
             Submit SMS <span aria-hidden="true">↗</span>
-          </button>
+          </Button>
         </form>
       ) : (
         <>
           <label htmlFor="manual-request-id">Request ID — keep this to find progress later</label>
-          <input id="manual-request-id" readOnly value={requestId} />
+          <Input id="manual-request-id" readOnly value={requestId} />
           {busy && (
             <p role="status" className="notice">
               Waiting for submission progress…
@@ -216,16 +215,11 @@ export function ManualSubmission({
           )}
           {record && <SubmissionProgress record={record} />}
           <div className="actions">
-            <button
-              className="button secondary"
-              type="button"
-              disabled={busy}
-              onClick={() => void check()}
-            >
+            <Button variant="outline" type="button" disabled={busy} onClick={() => void check()}>
               Check progress
-            </button>
-            <button
-              className="button ghost"
+            </Button>
+            <Button
+              variant="ghost"
               type="button"
               disabled={busy}
               onClick={() => {
@@ -236,7 +230,7 @@ export function ManualSubmission({
               }}
             >
               New draft
-            </button>
+            </Button>
           </div>
         </>
       )}
