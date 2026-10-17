@@ -29,9 +29,17 @@ def test_feed_authenticates_before_streaming_and_releases_on_disconnect() -> Non
             feed = client.portal.call(app.state.dishka_container.get, ChangeFeed)
             client.portal.call(feed.publish)
             assert socket.receive_json() == {"type": "invalidate", "revision": 1}
-        assert client.portal is not None
-        # One portal roundtrip lets the disconnected receiver clean up.
-        client.portal.call(asyncio.sleep, 0.01)
+            # Close gracefully and await handler completion before TestClient's
+            # context exit cancels the ASGI task. Scheduler timing differs across
+            # Python versions/OSes; a fixed sleep cannot synchronize this teardown.
+            socket.close()
+
+            async def disconnected() -> None:
+                async with asyncio.timeout(2):
+                    while feed._subscribers:
+                        await asyncio.sleep(0)
+
+            client.portal.call(disconnected)
         assert len(feed._subscribers) == 0
 
 
