@@ -109,6 +109,9 @@ test("manual submission normalizes text and existing progress can be checked wit
   await expect(composer.getByText("Accepted for submission", { exact: true })).toBeVisible();
   await expect(composer.getByText("Manual reply test", { exact: true })).toBeVisible();
   const id = await page.getByLabel("Request ID — keep this to find progress later").inputValue();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Compose SMS", exact: true }).click();
+  await expect(page.getByLabel("Request ID — keep this to find progress later")).toHaveValue(id);
   await composer.getByRole("button", { name: "Check progress" }).click();
   await expect(composer.getByText("Accepted for submission", { exact: true })).toBeVisible();
   await connect(page);
@@ -170,9 +173,9 @@ test("dry-run policy is visible and a mobile viewport has no horizontal overflow
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   });
+  await page.getByLabel("Cellular device").selectOption("status-only");
   await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.getByLabel("Cellular device").filter({ visible: true }).selectOption("status-only");
-  await page.keyboard.press("Escape");
+  await page.getByRole("link", { name: "Inbox", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SMS inbox not supported" })).toBeVisible();
 });
 
@@ -240,6 +243,24 @@ test("SPA navigation preserves authentication and browser history", async ({ pag
   await expect(page.getByRole("heading", { name: "Message inbox" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "API access" })).toBeVisible();
+});
+
+test("appearance follows the neutral theme and persists only that preference", async ({
+  page,
+}, testInfo) => {
+  await connect(page);
+  await page.getByRole("button", { name: "Appearance", exact: false }).click();
+  await page.getByRole("menuitem", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(["gsm-appearance"]);
+  expect(await page.content()).not.toContain("fixture-api-token");
+  await testInfo.attach("operator-console-dark", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  await page.getByRole("button", { name: "Appearance", exact: false }).click();
+  await page.getByRole("menuitem", { name: "Light", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/light/);
 });
 
 test("tRPC WebSocket reconnect resynchronizes committed messages", async ({ page, request }) => {

@@ -1,6 +1,7 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createTRPCClient, createWSClient, wsLink } from "@trpc/client";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-import type { AppRouter } from "../server/router";
+import type { AppRouter } from "../../../server/router";
 
 const LiveContext = createContext({ revision: 0, state: "connecting" });
 export function RealtimeProvider({
@@ -12,6 +13,7 @@ export function RealtimeProvider({
   children: ReactNode;
   enabled: boolean;
 }) {
+  const queries = useQueryClient();
   const [attempt, setAttempt] = useState(0);
   const [feed, setFeed] = useState({ revision: 0, state: "connecting" });
   useEffect(() => {
@@ -23,9 +25,15 @@ export function RealtimeProvider({
     let timer: ReturnType<typeof setTimeout> | undefined;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const bump = () => {
-      clearTimeout(timer);
+      if (timer) return;
       timer = setTimeout(() => {
-        if (!disposed) setFeed((current) => ({ state: "live", revision: current.revision + 1 }));
+        timer = undefined;
+        if (!disposed) {
+          setFeed((current) => ({ state: "live", revision: current.revision + 1 }));
+          void queries.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "device" && query.queryKey[2] !== "status",
+          });
+        }
       }, 80);
     };
     const ws = createWSClient({
@@ -48,6 +56,7 @@ export function RealtimeProvider({
       onError(error) {
         if (disposed) return;
         const unauthorized = error.data?.code === "UNAUTHORIZED";
+        if (unauthorized) void queries.invalidateQueries();
         setFeed((current) => ({
           revision: current.revision + 1,
           state: unauthorized ? "unauthorized" : "offline",
@@ -66,7 +75,7 @@ export function RealtimeProvider({
       subscription.unsubscribe();
       ws.close();
     };
-  }, [token, enabled, attempt]);
+  }, [token, enabled, attempt, queries]);
   return <LiveContext.Provider value={feed}>{children}</LiveContext.Provider>;
 }
 export const useRealtime = () => useContext(LiveContext);
