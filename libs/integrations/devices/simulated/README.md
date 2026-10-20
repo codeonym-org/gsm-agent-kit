@@ -17,3 +17,8 @@ In the server, set `GSM_DEVICE__SIMULATED_BALANCE_ENABLED=true` and
 The server's `simulated` extra installs this adapter. See the server README
 for a complete API demo. The adapter implements only core ports and has no
 FastAPI, Dishka, Mediary or AI dependency.
+
+`tests/test_contract.py` runs the [shared device contract suite](../../../standard-tests/README.md)
+against ready, unavailable and optional-balance profiles. The suite inspects
+balance support without reserving a session; adapter-specific tests exercise its
+synthetic consultation and ownership behavior separately.

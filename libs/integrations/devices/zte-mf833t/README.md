@@ -118,3 +118,12 @@ Adapter settings: `send_timeout_seconds=30`, `send_poll_interval_seconds=1`.
 The application owns normalization, natural splitting, output caps, durable intent
 and progress. Sending has hardware-free fixtures and assembled API tests; no
 new live SMS submission has been performed for this implementation.
+
+## Shared device contracts
+
+`tests/test_contract.py` inherits the [shared contract suite](../../../standard-tests/README.md)
+with an HTTP mock transport and fictional firmware, carrier and SMS data. Its
+transport rejects writes. This exercises canonical bindings, identity, read
+observations and cleanup through the same checks used by the simulated adapter.
+Protocol, deadlines, cancellation and submission outcomes retain their dedicated
+tests. Shared-suite success does not add physical-device verification evidence.
