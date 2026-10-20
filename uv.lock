@@ -316,11 +316,15 @@ name = "gsm-agent-cli"
 version = "0.1.0"
 source = { editable = "apps/cli" }
 dependencies = [
-    { name = "gsm-agent" },
+    { name = "httpx" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "gsm-agent", editable = "libs/gsm-agent" }]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
+]
 
 [[package]]
 name = "gsm-agent-core"

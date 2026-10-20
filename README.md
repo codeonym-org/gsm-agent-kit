@@ -107,6 +107,25 @@ hardware-free deployment test without provider keys or a device:
 python scripts/smoke_containers.py
 ```
 
+## Operator CLI
+
+The [query-only CLI](apps/cli/README.md) inspects adapters, logical devices,
+status, stored inbox messages, assistant jobs and durable submission outcomes
+through the running backend API. It shares the root `.env` API token and adds
+`GSM_CLI__API_URL` (default `http://127.0.0.1:8000`) and
+`GSM_CLI__TIMEOUT_SECONDS` (default `35`). Balance is an explicit query and
+reports unsupported capabilities without following carrier menus.
+
+```bash
+uv sync --locked --all-packages --all-extras
+uv run --no-sync gsm-agent devices
+uv run --no-sync gsm-agent status zte-device
+uv run --no-sync gsm-agent inbox zte-device --limit 25
+```
+
+Success output is JSON; errors use stderr and documented exit codes. The CLI
+does not start services, send SMS, retry submissions or take device ownership.
+
 ## Develop
 
 ```bash
