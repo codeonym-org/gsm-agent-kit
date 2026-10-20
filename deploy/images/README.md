@@ -25,3 +25,23 @@ assembled smoke system. See [Compose usage](../compose/README.md).
 The build follows uv's documented [non-editable workspace image pattern](https://docs.astral.sh/uv/guides/integration/docker/).
 Runtime environment configuration uses Compose's
 [`env_file` and service settings](https://docs.docker.com/reference/compose-file/services/).
+
+## Production console and gateway
+
+`web.Dockerfile` uses Node 24 with the workspace's pinned pnpm 11.26.0 to build
+the SPA and bundle the gateway with esbuild. Its separate runtime targets are:
+
+- `console`: Caddy 2 Alpine, static SPA/assets/notices and the routing Caddyfile.
+- `realtime`: Node 24 slim, the bundled gateway and third-party notices.
+
+Neither target copies workspace source, node_modules or provider configuration.
+The Caddy image also contains no Node runtime. The gateway uses its JavaScript
+ws implementation without optional native accelerators. Build tools remain in
+the builder stage. Docker base tags track updates within their selected majors; images are built locally
+and are not automatically published.
+
+The root allowlist also permits the pnpm manifests and web build sources while
+excluding local environments, browser test artifacts and generated outputs.
+See [pnpm's Docker guidance](https://pnpm.io/docker) and Caddy's
+[reverse proxy documentation](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
+for the build and WebSocket proxy behavior used here.

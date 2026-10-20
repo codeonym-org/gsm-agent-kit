@@ -26,9 +26,8 @@ services:
       timeout: 3s
       retries: 15
     volumes: [smoke-fixtures:/var/lib/gsm-agent]
-    networks: [smoke]
 
-  smoke-backend:
+  zte:
     <<: *runtime
     profiles: [smoke]
     image: gsm-agent-kit/smoke:local
@@ -51,7 +50,10 @@ services:
     depends_on:
       smoke-fixtures: {condition: service_healthy}
     volumes: [smoke-state:/var/lib/gsm-agent]
-    networks: [smoke]
+
+  console:
+    # Overlay console.yaml first. Synthetic tests publish no host ports.
+    ports: !reset []
 
   smoke-check:
     <<: *runtime
@@ -61,11 +63,10 @@ services:
     command: [python, /smoke/check.py, exercise]
     healthcheck: {disable: true}
     depends_on:
-      smoke-backend: {condition: service_healthy}
-    networks: [smoke]
+      console: {condition: service_healthy}
 
 networks:
-  smoke:
+  default:
     internal: true
 
 volumes:

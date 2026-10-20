@@ -5,8 +5,9 @@ import sys
 import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
-API = "http://smoke-backend:8000"
+API = "http://console:8080"
 FIXTURES = "http://smoke-fixtures:9000"
 DEVICE = "/api/devices/smoke-device"
 
@@ -52,14 +53,20 @@ def main(phase):
     assert request("/health")["adapter_profile"] == "zte-mf833t"
     assert request(DEVICE + "/status")["availability"] == "ready"
     status = request(DEVICE + "/assistant")
-    assert status["auto_reply"] and status["dry_run"] == (phase == "dry-run")
+    assert status["auto_reply"] and status["dry_run"] == (phase in {"dry-run", "manual-proxy"})
     try:
         request("/api/adapters", authenticated=False)
         raise AssertionError("Protected API accepted an unauthenticated request")
     except HTTPError as exc:
         assert exc.code == 401
 
-    if phase == "exercise":
+    if phase == "console":
+        import asyncio
+
+        from console import check_console
+
+        asyncio.run(check_console())
+    elif phase == "exercise":
         # Establish the empty inbox baseline through the real command endpoint.
         request(DEVICE + "/inbox/ingest", {})
         request("/incoming", {"body": "Hello from the synthetic SIM."}, fixtures=True)
@@ -87,6 +94,19 @@ def main(phase):
         # Several complete polls/drains must not re-enqueue or resubmit stored SMS.
         time.sleep(2)
         assert request("/effects", fixtures=True) == effects
+    elif phase == "manual-proxy":
+        payload = {
+            "request_id": str(uuid4()),
+            "destination": "+212600000000",
+            "text": "**Manual** synthetic SMS.",
+        }
+        first = request(DEVICE + "/submissions", payload)
+        again = request(DEVICE + "/submissions", payload)
+        assert first["request_id"] == again["request_id"] == payload["request_id"]
+        assert first["complete"] and again["complete"] and again["accepted_parts"] == 1
+        effects = request("/effects", fixtures=True)
+        assert len(effects["outgoing"]) == 3 and len(effects["histories"]) == 3
+        assert effects["outgoing"][-1] == "Manual synthetic SMS."
     else:
         raise ValueError("Unknown smoke phase")
     print(f"PASS: {phase}", flush=True)

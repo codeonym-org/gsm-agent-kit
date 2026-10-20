@@ -30,6 +30,7 @@ web settings (defaults shown) are server-side only:
 ```dotenv
 GSM_API_PROXY_TARGET=http://127.0.0.1:8000
 GSM_REALTIME_PORT=3001
+GSM_REALTIME_HOST=127.0.0.1
 GSM_REALTIME_PROXY_TARGET=http://127.0.0.1:3001
 ```
 
@@ -138,9 +139,20 @@ Do not cache API responses or retry submission POSTs. Use TLS outside trusted
 local development; the browser automatically uses `wss:` under HTTPS.
 
 The gateway runs using `pnpm --filter @gsm-agent-kit/web realtime` independently
-of Vite. Gateway runtime dependencies include `tsx` in the current development
-profile; static assets alone do not provide realtime. Container packaging remains
-a separate deployment task.
+of Vite during development. `pnpm web:build` also bundles its production entry
+point into `apps/web/dist-server/index.mjs`; run it with Node 24+ using
+`node apps/web/dist-server/index.mjs`. The bundle includes its JavaScript runtime
+dependencies and needs neither tsx nor node_modules. Optional native ws
+accelerators are omitted. It defaults to loopback; `GSM_REALTIME_HOST=0.0.0.0`
+permits connections from sibling containers. Its runtime dependencies' notices
+must accompany the bundle, as in the provided image.
+
+The [production Compose overlay](../../deploy/compose/README.md#production-console)
+adds the static console and bundled gateway to the backend profile. Caddy serves
+SPA deep links and hashed assets and forwards API and WebSocket traffic through
+one browser origin. The gateway has no published host port, so a host application
+already using 3001 does not conflict. The default browser port is 8080, configured
+through `GSM_CONSOLE_PORT` in root `.env`.
 
 Original code remains all rights reserved. Third-party notices, including shadcn,
 Radix, Lucide, React, React Router and tRPC, are preserved in

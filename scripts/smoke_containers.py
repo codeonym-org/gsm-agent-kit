@@ -23,6 +23,20 @@ assert not Path('/app/.env').exists()
 LangChainAgent(model='openai/gpt-4.1-mini', api_key='synthetic-unused-key', instructions='Fixture only.')
 print('PASS: production dependencies, non-root user and fixture/secret exclusion')
 """
+REALTIME_CHECK = """
+import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
+assert.notEqual(process.getuid(), 0);
+assert(existsSync('/app/index.mjs'));
+for (const path of ['/build', '/app/node_modules', '/app/server', '/app/.env'])
+    assert(!existsSync(path), path);
+console.info('PASS: bundled gateway is non-root with no workspace/node_modules/config file');
+"""
+CONSOLE_CHECK = (
+    'test "$(id -u)" != 0 && test ! -d /build && test ! -d /srv/node_modules '
+    "&& test ! -f /srv/.env && ! command -v node && caddy version >/dev/null "
+    '&& echo "PASS: static console is non-root with no Node/workspace/config file"'
+)
 
 
 def main() -> None:
@@ -42,9 +56,13 @@ def main() -> None:
         "-p",
         project,
         "-f",
+        str(ROOT / "deploy/compose/console.yaml"),
+        "-f",
         str(ROOT / "deploy/compose/smoke.yaml"),
         "--profile",
         "smoke",
+        "--profile",
+        "console",
     ]
 
     def compose(*arguments: str, dry_run: bool = False) -> None:
@@ -73,7 +91,7 @@ def main() -> None:
                 env=env,
                 check=True,
             )
-            compose("build", "smoke-backend")
+            compose("build", "zte", "realtime", "console")
         subprocess.run(
             [
                 "docker",
@@ -91,16 +109,52 @@ def main() -> None:
             env=env,
             check=True,
         )
-        compose("up", "-d", "--wait", "--wait-timeout", "90", "smoke-backend")
+        for image, executable, arguments in (
+            ("realtime", "node", ["--input-type=module", "-e", REALTIME_CHECK]),
+            ("console", "/bin/sh", ["-c", CONSOLE_CHECK]),
+        ):
+            subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--network",
+                    "none",
+                    "--read-only",
+                    "--cap-drop",
+                    "ALL",
+                    "--security-opt",
+                    "no-new-privileges",
+                    "--entrypoint",
+                    executable,
+                    f"gsm-agent-kit/{image}:local",
+                    *arguments,
+                ],
+                cwd=ROOT,
+                env=env,
+                check=True,
+            )
+        compose("up", "-d", "--wait", "--wait-timeout", "90", "console")
+        compose("run", "--rm", "--no-deps", "smoke-check", "python", "/smoke/check.py", "console")
         compose("run", "--rm", "--no-deps", "smoke-check", "python", "/smoke/check.py", "exercise")
         compose("down")
-        compose("up", "-d", "--wait", "--wait-timeout", "90", "smoke-backend")
+        compose("up", "-d", "--wait", "--wait-timeout", "90", "console")
         compose("run", "--rm", "--no-deps", "smoke-check", "python", "/smoke/check.py", "persist")
-        compose("up", "-d", "--wait", "--wait-timeout", "90", "smoke-backend", dry_run=True)
+        compose("up", "-d", "--wait", "--wait-timeout", "90", "console", dry_run=True)
         compose(
             "run", "--rm", "--no-deps", "smoke-check", "python", "/smoke/check.py", "dry-run", dry_run=True
         )
-        print("PASS: container SMS flow, restart persistence, conversation memory, dry-run and deduplication")
+        compose(
+            "run",
+            "--rm",
+            "--no-deps",
+            "smoke-check",
+            "python",
+            "/smoke/check.py",
+            "manual-proxy",
+            dry_run=True,
+        )
+        print("PASS: production console/realtime, SMS flow, restart persistence, dry-run and deduplication")
     except (subprocess.CalledProcessError, KeyboardInterrupt):
         # These logs belong only to this uniquely named synthetic fixture project.
         subprocess.run([*command, "logs", "--tail", "80"], cwd=ROOT, env=env, check=False)

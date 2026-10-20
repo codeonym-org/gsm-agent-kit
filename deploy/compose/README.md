@@ -2,8 +2,9 @@
 
 Run commands from the repository root. Docker Engine with Compose v2.24+ (or
 Compose v5) is required. The deployment consists of one backend process and a
-named volume containing its three SQLite databases. The browser and its tRPC
-gateway remain separate; use `pnpm web:dev` against the published backend port.
+named volume containing its three SQLite databases. The production console
+overlay adds the built SPA and tRPC gateway. For local UI development, use
+`pnpm web:dev` against the published backend port instead.
 
 ## ZTE MF833T
 
@@ -79,13 +80,76 @@ needs outbound access to the device management address and OpenRouter. Exactly
 one backend owns a physical device and its state: do not scale this service or
 run another application against that device concurrently.
 
+## Production console
+
+Add the console overlay to the ZTE profile. Both files belong to the same
+`gsm-agent-kit` project and reuse its existing state volume. Add an optional
+`GSM_CONSOLE_PORT=8080` setting to root `.env` to choose the browser port; provider
+keys and the assistant's dry-run setting remain in that same file.
+
+```bash
+docker compose --env-file .env \
+  -f deploy/compose/zte-mf833t.yaml -f deploy/compose/console.yaml \
+  --profile zte --profile console up --build -d --wait
+```
+
+Open http://127.0.0.1:8080 (or your configured port), then enter your API token
+using **API connection**. No Vite or host-side Node/pnpm process is needed.
+The gateway listens on port 3001 **inside** the Compose network and has no
+published host port; a host Grafana on 3001 does not conflict. The backend's
+existing loopback port 8000 remains available for API tools. Browser requests
+use only the console origin:
+
+```text
+browser :8080 → Caddy → static SPA/assets
+                     → /api, /health → zte:8000
+                     → /trpc (WebSocket) → realtime:3001 → zte:8000/api/events
+```
+
+Only the backend receives the provider credentials from `.env`. The console and
+gateway receive their internal upstream addresses; they do not receive an API
+token granting elevated access. HTTP authorization and the browser's WebSocket
+connection token pass through to the existing backend checks. The proxy preserves
+Host/Origin, keeps API failures out of SPA fallback, does not cache API responses
+and does not enable retries for submission POSTs. Hashed assets use immutable
+caching; SPA HTML requires revalidation.
+
+```bash
+curl http://127.0.0.1:8080/_console/health
+curl http://127.0.0.1:8080/health
+docker compose --env-file .env \
+  -f deploy/compose/zte-mf833t.yaml -f deploy/compose/console.yaml \
+  --profile zte --profile console ps
+```
+
+`/_console/health` checks static hosting, `/health` checks Python through the
+proxy, and the gateway container's health check checks its process. These do not
+prove that a SIM or carrier is ready; inspect device status and assistant jobs
+in the UI. Both new containers are non-root with read-only filesystems and no
+device mounts. Production Node runs a bundled gateway, and Caddy serves the
+built SPA; development dependencies are absent from the runtime images.
+
+Stop the application while retaining its state:
+
+```bash
+docker compose --env-file .env \
+  -f deploy/compose/zte-mf833t.yaml -f deploy/compose/console.yaml \
+  --profile zte --profile console down
+```
+
+This is a loopback HTTP deployment. Configure an authenticated TLS reverse proxy
+before exposing it to other machines, preserve the public Host/Origin through
+that proxy, and keep internal gateway/backend ports private. Automatic public
+HTTPS and domain provisioning are not configured by this profile. Existing
+single-owner device and dry-run/manual-send rules still apply.
+
 ## Hardware-free smoke test
 
 ```bash
 python scripts/smoke_containers.py
 ```
 
-This builds both image targets and creates a uniquely named disposable Compose
+This builds the backend, fixture, console and gateway targets and creates a uniquely named disposable Compose
 project, with an internal network, no published ports, synthetic credentials
 and dedicated volumes. It never loads the root `.env`. The production target
 is checked for its selected dependencies, non-root user and absence of fixture
@@ -95,11 +159,17 @@ calls a separate deterministic fixture service; OpenRouter/LangChain and real
 carrier services are not called. The fixture service also emulates the ZTE HTTP
 protocol. This establishes protocol behavior, not firmware compatibility.
 
-The checks establish the empty inbox baseline, inject an incoming message,
+The checks first verify the production SPA's deep links, asset types/caching,
+notices and JSON API authorization/errors. They exercise a same-origin tRPC
+subscription through Caddy and the bundled gateway to Python, reject wrong-token
+and cross-origin WebSocket clients, then perform the SMS checks through Caddy's
+API proxy. The checks establish the empty inbox baseline, inject an incoming message,
 observe one normalized accepted reply, recreate the backend and fixture
 containers, verify durable inbox/jobs/submissions, send a second message with
 restored conversation history, switch to dry-run, and verify generation without
-another submission. Repeated polling must not generate duplicates. The script
+another automatic submission. A final authenticated manual POST through the
+proxy verifies plain-text preparation and replay of the same request UUID without
+another device submission. Repeated polling must not generate duplicates. The script
 removes only its own containers, network and synthetic volumes, including on
 failure. Built images and build cache remain reusable. Use `--no-build` after a
 successful build when no image inputs changed. CI runs this same smoke test.
