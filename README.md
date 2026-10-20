@@ -32,7 +32,8 @@ and the model-specific ZTE MF833T HTTP adapter.
 Incoming SMS ingestion is implemented with source baselines, a SQLite ledger
 and durable events. Outgoing SMS submission has durable intent, per-part attempts
 and bounded plain-text preparation. OpenRouter replies use a durable queue and
-bounded persistent conversations. Remaining integrations and browser UI are being built as
+bounded persistent conversations. A capability-aware browser console operates these APIs.
+Remaining integrations and deployment profiles are being built as
 [implementation tickets](https://github.com/orgs/codeonym-org/projects/2).
 Each package owns its dependencies, README, source namespace, typing marker and tests.
 
@@ -80,6 +81,18 @@ and configure `GSM_ASSISTANT__API_KEY` in your local environment. The assistant
 starts in dry-run mode. See the [assistant setup](apps/server/README.md#sms-assistant)
 for live sending, conversation retention, budgets and operator status.
 
+## Operator console
+
+The [browser console](apps/web/README.md) selects a logical device and displays
+capabilities, observed status, inbox, assistant mode and submission progress.
+With the backend running, use `pnpm install --frozen-lockfile` and `pnpm web:dev`
+from the repository root, then open http://127.0.0.1:5173. It uses the existing
+API and offers SMS/balance actions only when the adapter implements them.
+The SPA uses shadcn/ui and routed overview, inbox, workflow and device screens.
+`pnpm web:dev` also starts its tRPC WebSocket gateway for live inbox and reply
+updates. Proxy settings come from root `.env`; see the web README for defaults.
+pnpm is pinned in root `package.json`; no provider credentials go in the UI.
+
 ## Develop
 
 ```bash
@@ -88,6 +101,11 @@ uv run ruff check .
 uv run ruff format --check .
 uv run pyright
 uv run python scripts/run_tests.py
+pnpm install --frozen-lockfile
+pnpm web:generate-api
+pnpm web:check
+pnpm web:build
+pnpm web:test
 ```
 
 `uv.lock` coordinates local development. `.v0` is excluded from workspace

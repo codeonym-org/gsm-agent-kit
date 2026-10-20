@@ -16,12 +16,17 @@ from gsm_agent_core.domain.devices import CellularDeviceId
 from gsm_agent_core.ports import CellularDevice
 
 from gsm_agent_server.infra.devices import ConfiguredDevices
+from gsm_agent_server.infra.realtime import ChangeFeed, ObservedInbox, ObservedReplies, ObservedSubmissions
 from gsm_agent_server.infra.replies import DisabledAgent, DisabledReplyStore
 from gsm_agent_server.runtime.settings import DeviceSettings, Settings
 
 
 class DeviceProvider(Provider):
     scope = Scope.APP
+
+    @provide
+    def change_feed(self) -> ChangeFeed:
+        return ChangeFeed()
 
     @provide
     def balance_policy(self, settings: Settings) -> BalancePolicy:
@@ -47,7 +52,9 @@ class DeviceProvider(Provider):
         return ReplyCoordinator()
 
     @provide
-    async def reply_store(self, settings: Settings, policy: ReplyPolicy) -> AsyncIterator[ReplyStore]:
+    async def reply_store(
+        self, settings: Settings, policy: ReplyPolicy, feed: ChangeFeed
+    ) -> AsyncIterator[ReplyStore]:
         if not settings.assistant.enabled:
             yield DisabledReplyStore()
             return
@@ -58,7 +65,7 @@ class DeviceProvider(Provider):
         store = await SqliteReplyStore.open(settings.assistant.database_path)
         try:
             await store.prune(policy)
-            yield store
+            yield ObservedReplies(store, feed)
         finally:
             await store.close()
 
@@ -93,7 +100,7 @@ class DeviceProvider(Provider):
         return SubmissionCoordinator()
 
     @provide
-    async def submission_store(self, settings: Settings) -> AsyncIterator[SubmissionStore]:
+    async def submission_store(self, settings: Settings, feed: ChangeFeed) -> AsyncIterator[SubmissionStore]:
         if not settings.submissions.enabled:
             raise SubmissionDisabledError("SMS submission is disabled; enable GSM_SUBMISSIONS__ENABLED")
         try:
@@ -102,7 +109,7 @@ class DeviceProvider(Provider):
             raise RuntimeError("Install gsm-agent-server[sms] for durable SMS submission") from exc
         store = await SqliteSubmissionStore.open(settings.submissions.database_path)
         try:
-            yield store
+            yield ObservedSubmissions(store, feed)
         finally:
             await store.close()
 
@@ -115,7 +122,7 @@ class DeviceProvider(Provider):
         return IngestionCoordinator()
 
     @provide
-    async def inbox_store(self, settings: Settings) -> AsyncIterator[InboxStore]:
+    async def inbox_store(self, settings: Settings, feed: ChangeFeed) -> AsyncIterator[InboxStore]:
         if not settings.inbox.enabled:
             raise InboxDisabledError("Inbox ingestion is disabled; enable GSM_INBOX__ENABLED")
         try:
@@ -124,7 +131,7 @@ class DeviceProvider(Provider):
             raise RuntimeError("Install gsm-agent-server[inbox] for durable inbox ingestion") from exc
         store = await SqliteInboxStore.open(settings.inbox.database_path)
         try:
-            yield store
+            yield ObservedInbox(store, feed)
         finally:
             await store.close()
 
