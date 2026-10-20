@@ -6,7 +6,11 @@ readme = "README.md"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
-dependencies = ['gsm-agent-core', 'gsm-agent']
+dependencies = [
+    'gsm-agent-core',
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -17,4 +21,3 @@ packages = ["src/gsm_agent_standard_tests"]
 
 [tool.uv.sources]
 gsm-agent-core = { workspace = true }
-gsm-agent = { workspace = true }

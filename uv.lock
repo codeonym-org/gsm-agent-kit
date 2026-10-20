@@ -563,14 +563,16 @@ name = "gsm-agent-standard-tests"
 version = "0.1.0"
 source = { editable = "libs/standard-tests" }
 dependencies = [
-    { name = "gsm-agent" },
     { name = "gsm-agent-core" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "gsm-agent", editable = "libs/gsm-agent" },
     { name = "gsm-agent-core", editable = "libs/core" },
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
 [[package]]

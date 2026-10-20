@@ -81,7 +81,10 @@ currently supply generic working adapters for arbitrary models. The tree above
 records the current filesystem, not the final device taxonomy.
 
 `standard-tests` supplies reusable adapter contract tests; it does not contain
-the entire repository test suite. Integrations keep their own unit/protocol tests.
+the entire repository test suite. Its [device suite](../libs/standard-tests/README.md)
+is inherited by simulated and fixture-backed ZTE tests. Integrations keep their
+own protocol and operation-outcome tests. This test-only package depends on core
+and pytest tooling, and is not a dependency of runtime adapters or applications.
 
 `kit` supplies explicit optional installation bundles; core contracts must not
 depend on it. Its final relationship to the CLI/server will be decided during

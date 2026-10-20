@@ -31,6 +31,9 @@ Behavior tests cover device inspection, inbox protocol decoding and durable SMS
 ingestion/submission, balance session ownership and persistent AI replies with temporary SQLite databases,
 fixture chat models and no paid API calls or hardware. New implementations
 must add corresponding behavioral coverage.
+Simulated and fixture-backed ZTE adapters also inherit the reusable cellular-device
+contract suite in `libs/standard-tests`, covering declarations, typed lookup,
+identity, read observations and cleanup without sends or carrier consultations.
 
 The `web` CI job installs the pinned pnpm workspace, checks generated OpenAPI
 types for drift, lints/type-checks/builds the console, and runs Playwright against
