@@ -62,11 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     for name, path, help_text in (
         ("health", "/health", "Check backend process health; does not establish device readiness"),
+        ("runtime", "/api/runtime", "Read recorded background-worker status without probing devices"),
         ("adapters", "/api/adapters", "List installed adapter manifests and verification evidence"),
         ("devices", "/api/devices", "List logical devices with declared capabilities and observations"),
     ):
         command = commands.add_parser(name, help=help_text)
-        command.set_defaults(path=path, many=name != "health", paginated=False)
+        command.set_defaults(path=path, many=name not in {"health", "runtime"}, paginated=False)
     for name, suffix, help_text, many in (
         ("device", "", "Inspect a logical device and its adapter", False),
         ("status", "/status", "Read device status and capability availability", False),

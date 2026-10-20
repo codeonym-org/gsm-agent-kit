@@ -47,6 +47,12 @@ never become assistant history. The existing preparation policy owns output
 normalization, splitting and limits for both live sending and dry-run previews.
 `GetAssistantStatus` and `ListReplyJobs` are queries over local workflow state.
 
+`GetRuntimeStatus` is a read-only query over `RuntimeStatusReader`. Its immutable
+observations describe process-local background-worker lifecycle, iteration
+counts, timestamps and sanitized issues. Runtime instrumentation lives in the
+server; the query does not probe devices, providers or stores. Worker iteration
+success is separate from reply-job, submission and delivery outcomes.
+
 Python import: `gsm_agent`.
 
 `ConsultBalance` is a Mediary query over `carrier.balance.read`. It checks support

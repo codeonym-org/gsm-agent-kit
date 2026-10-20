@@ -129,6 +129,48 @@ If the outer application query budget expires instead, the API returns 504.
 Neither case removes declared capability support. `ready` describes the status
 interface, not a guarantee of network registration or SMS delivery.
 
+## Background worker status
+
+`GET /api/runtime` is an authenticated Mediary query over recorded, process-local
+observations. It returns `Cache-Control: no-store` and never probes the device,
+provider or databases. The operator CLI exposes the same query:
+
+```bash
+uv run --no-sync gsm-agent runtime
+```
+
+`started_at` identifies when this runtime's monitor was created; `observed_at`
+dates the snapshot. Counts reset on restart. The `inbox` and `replies` entries
+have these states:
+
+| State | Meaning |
+| --- | --- |
+| `disabled` | Worker is disabled by configuration |
+| `starting` | Enabled, before its first iteration |
+| `running` | An iteration is in progress |
+| `waiting` | Last iteration succeeded; waiting for the configured interval |
+| `degraded` | Last iteration failed; waiting for the existing next iteration |
+| `failed` | Worker exited unexpectedly and is no longer processing |
+| `stopped` | Worker was cancelled during cleanup |
+
+Each entry includes iteration-start/success/failure counts, consecutive failures,
+and nullable UTC attempt/success/failure timestamps. An inbox iteration is the
+whole configured device sweep: any device failure makes that iteration fail.
+A successful iteration clears consecutive failures, while `last_issue` and
+`last_failure_at` retain the most recent failure history. Issues are fixed device
+read codes, `operation_failed`, or `unexpected_exit`; raw exceptions are omitted.
+Unexpected termination records its issue/time without inventing a failed iteration.
+Cancellation can leave a started iteration without a success or failure count.
+
+This records background execution. An empty inbox or idle reply queue can produce
+a successful iteration. A reply job can record an agent/preparation/submission
+failure while the worker itself successfully handles it; inspect assistant jobs
+and submission outcomes for those results. `running` plus timestamps describes
+an in-flight iteration; it does not detect hangs or prove device readiness,
+provider connectivity or SMS delivery. HTTP 200 means the query succeeded.
+`/health` and container health checks retain process-liveness semantics. There
+is no additional retry/restart policy, persistent metrics store or new env key.
+
 ## Incoming SMS
 
 Install both optional integrations and enable ingestion explicitly:

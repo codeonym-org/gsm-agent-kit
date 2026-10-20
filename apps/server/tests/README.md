@@ -10,3 +10,7 @@ Ownership tests cover native cross-process locks, forced termination,
 canonical paths, failed startup and cancelled shutdown. An assembled runtime
 check ensures a second backend cannot recover an active submission or open its
 device; ordinary restart still marks interrupted attempts unknown.
+Runtime-status tests use the real query/DI/API path with failing and blocked
+synthetic inbox ports. They cover whole-sweep failure aggregation, recovery,
+recorded-only authenticated reads, exception redaction, cancellation before and
+during execution, unexpected exit and reply-worker observations without AI calls.

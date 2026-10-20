@@ -17,6 +17,7 @@ from gsm_agent.application.ports.inbox import InboxStore
 from gsm_agent.application.ports.replies import ReplyStore
 from gsm_agent.application.ports.submissions import SubmissionStore
 from gsm_agent.application.queries.balance import BalanceNotConfiguredError
+from gsm_agent.application.runtime import WorkerId
 from gsm_agent.application.submissions import (
     InvalidSmsError,
     SubmissionConflictError,
@@ -32,10 +33,12 @@ from gsm_agent_core.domain.sms import InboxReadError
 from gsm_agent_server.api.realtime import router as realtime_router
 from gsm_agent_server.api.routes import router
 from gsm_agent_server.di.container import build_container
+from gsm_agent_server.infra.runtime import RuntimeMonitor
 from gsm_agent_server.infra.state_ownership import own_state
 from gsm_agent_server.runtime.inbox import poll_inboxes
 from gsm_agent_server.runtime.replies import process_replies
 from gsm_agent_server.runtime.settings import Settings
+from gsm_agent_server.runtime.workers import observe_worker
 
 
 async def finish_cleanup(task: asyncio.Task[None]) -> None:
@@ -59,6 +62,7 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         polling: asyncio.Task[None] | None = None
         replying: asyncio.Task[None] | None = None
+        monitor: RuntimeMonitor | None = None
         ownership = ExitStack()
         try:
             ownership.enter_context(
@@ -70,6 +74,7 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
             )
             # Compose eagerly: invalid selections fail startup, not the first request.
             await container.get(DeviceDirectory)
+            monitor = await container.get(RuntimeMonitor)
             if config.submissions.enabled:
                 await container.get(SubmissionStore)
             if config.inbox.enabled:
@@ -78,10 +83,16 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
                 await container.get(ReplyStore)
                 await container.get(AIAgent)
                 replying = asyncio.create_task(
-                    process_replies(container, config.assistant), name="sms-replies"
+                    observe_worker(
+                        lambda: process_replies(container, config.assistant), monitor, WorkerId.REPLIES
+                    ),
+                    name="sms-replies",
                 )
             if config.inbox.enabled:
-                polling = asyncio.create_task(poll_inboxes(container, config.inbox), name="inbox-polling")
+                polling = asyncio.create_task(
+                    observe_worker(lambda: poll_inboxes(container, config.inbox), monitor, WorkerId.INBOX),
+                    name="inbox-polling",
+                )
             yield
         finally:
 
@@ -91,6 +102,11 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
                     for task in tasks:
                         task.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
+                    # A task cancelled before its first step never enters the observer.
+                    if monitor is not None:
+                        for worker, task in ((WorkerId.INBOX, polling), (WorkerId.REPLIES, replying)):
+                            if task is not None and task.cancelled():
+                                monitor.exited(worker, cancelled=True)
                 finally:
                     await container.close()
 

@@ -130,6 +130,7 @@ def test_installed_cli_reads_real_backend_and_durable_outcomes_without_resubmiss
     results = {}
     for command in (
         "health",
+        "runtime",
         "adapters",
         "devices",
         "device",
@@ -139,12 +140,19 @@ def test_installed_cli_reads_real_backend_and_durable_outcomes_without_resubmiss
         "jobs",
         "balance",
     ):
-        args = (command,) if command in {"health", "adapters", "devices"} else (command, "cli-fixture")
+        args = (
+            (command,)
+            if command in {"health", "runtime", "adapters", "devices"}
+            else (command, "cli-fixture")
+        )
         result = invoke(*args)
         assert result.returncode == 0, result.stderr
         assert not result.stderr and "synthetic-cli-token" not in result.stdout
         results[command] = json.loads(result.stdout)
     assert results["health"]["status"] == "ok"
+    workers = {worker["worker_id"]: worker for worker in results["runtime"]["workers"]}
+    assert workers["replies"]["state"] == "disabled"
+    assert workers["inbox"]["iterations_started"] >= 1
     assert results["devices"][0]["device_id"] == "cli-fixture"
     assert set(results["device"]["adapter"]["capabilities"]) == {"device.status.read", "carrier.balance.read"}
     assert results["status"]["availability"] == "ready"
