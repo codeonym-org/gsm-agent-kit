@@ -1,1 +1,1 @@
-"""Device discovery, setup and diagnostics CLI. Implementation pending."""
+"""Query-only operator client for the GSM Agent Kit API."""
