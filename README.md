@@ -97,7 +97,10 @@ pnpm is pinned in root `package.json`; no provider credentials go in the UI.
 ## Containers
 
 See [container setup and host prerequisites](deploy/compose/README.md) for the
-ZTE MF833T assistant, runtime `.env` settings and persistent storage. Run the
+ZTE MF833T assistant, runtime `.env` settings and persistent storage. The
+[production console overlay](deploy/compose/README.md#production-console) starts
+the built browser UI and realtime gateway alongside it, using port 8080 for the
+browser and no published gateway port. Run the
 hardware-free deployment test without provider keys or a device:
 
 ```bash

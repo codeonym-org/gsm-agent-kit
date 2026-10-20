@@ -1,9 +1,12 @@
-# Allow only Python workspace inputs and isolated deployment fixtures into builds.
+# Allow only workspace build inputs and isolated deployment fixtures into builds.
 **
 !pyproject.toml
 !uv.lock
 !LICENSE
 !NOTICE
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
 !libs/
 !libs/**
 !apps/
@@ -11,9 +14,13 @@
 !apps/server/**
 !apps/cli/
 !apps/cli/**
+!apps/web/
+!apps/web/**
 !deploy/
 !deploy/smoke/
 !deploy/smoke/**
+!deploy/images/
+!deploy/images/Caddyfile
 **/.env
 **/.env.*
 **/.venv
@@ -25,6 +32,10 @@
 **/*.sqlite3
 **/*.sqlite3-*
 **/dist
+**/dist-server
 **/build
 **/*.egg-info
 **/tests
+**/node_modules
+**/playwright-report
+**/test-results

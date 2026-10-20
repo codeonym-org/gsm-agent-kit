@@ -1,0 +1,37 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:8080 {
+	root * /srv
+	encode gzip
+
+	handle /_console/health {
+		header Cache-Control "no-store"
+		respond "ok" 200
+	}
+
+	@api path /api /api/* /health
+	handle @api {
+		header Cache-Control "no-store"
+		reverse_proxy {$GSM_BACKEND_UPSTREAM:zte:8000}
+	}
+
+	@realtime path /trpc /trpc/*
+	handle @realtime {
+		reverse_proxy {$GSM_REALTIME_UPSTREAM:realtime:3001}
+	}
+
+	handle /assets/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

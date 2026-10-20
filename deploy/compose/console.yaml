@@ -1,0 +1,44 @@
+# Overlay: use alongside zte-mf833t.yaml with --profile zte --profile console.
+services:
+  realtime:
+    profiles: [console]
+    image: gsm-agent-kit/realtime:local
+    build:
+      context: ../..
+      dockerfile: deploy/images/web.Dockerfile
+      target: realtime
+    environment:
+      GSM_API_PROXY_TARGET: http://zte:8000
+      GSM_REALTIME_HOST: 0.0.0.0
+      GSM_REALTIME_PORT: "3001"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    stop_grace_period: 20s
+    restart: unless-stopped
+    depends_on:
+      zte: {condition: service_healthy}
+
+  console:
+    profiles: [console]
+    image: gsm-agent-kit/console:local
+    build:
+      context: ../..
+      dockerfile: deploy/images/web.Dockerfile
+      target: console
+    environment:
+      GSM_BACKEND_UPSTREAM: zte:8000
+      GSM_REALTIME_UPSTREAM: realtime:3001
+    ports: ["127.0.0.1:${GSM_CONSOLE_PORT:-8080}:8080"]
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    stop_grace_period: 20s
+    restart: unless-stopped
+    depends_on:
+      zte: {condition: service_healthy}
+      realtime: {condition: service_healthy}

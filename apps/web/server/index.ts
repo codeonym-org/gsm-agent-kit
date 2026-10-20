@@ -9,6 +9,7 @@ import { appRouter } from "./router";
 config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 const backend = process.env.GSM_API_PROXY_TARGET || "http://127.0.0.1:8000";
 const port = Number(process.env.GSM_REALTIME_PORT || 3001);
+const host = process.env.GSM_REALTIME_HOST || "127.0.0.1";
 if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error("Invalid GSM_REALTIME_PORT");
 const server = createServer((_req, res) => {
@@ -49,9 +50,13 @@ const handler = applyWSSHandler({
     return { token, backend };
   },
 });
-server.listen(port, "127.0.0.1", () =>
-  console.info(`Realtime gateway listening on 127.0.0.1:${port}`),
-);
+server.on("error", (error: NodeJS.ErrnoException) => {
+  console.error(
+    `Realtime gateway could not listen on ${host}:${port} (${error.code || "UNKNOWN"})`,
+  );
+  process.exit(1);
+});
+server.listen(port, host, () => console.info(`Realtime gateway listening on ${host}:${port}`));
 function shutdown() {
   handler.broadcastReconnectNotification();
   for (const client of wss.clients) client.terminate();
