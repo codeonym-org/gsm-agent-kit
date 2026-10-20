@@ -74,9 +74,15 @@ jobs:
             apps/web/test-results/
             apps/web/playwright-report/
           retention-days: 7
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 scripts/smoke_containers.py
   ci-ok:
     if: always()
-    needs: [lint, typecheck, test, build-check, web]
+    needs: [lint, typecheck, test, build-check, web, containers]
     runs-on: ubuntu-latest
     steps:
       - name: All CI jobs passed
