@@ -23,6 +23,7 @@
 !deploy/images/Caddyfile
 **/.env
 **/.env.*
+**/*.owner.lock
 **/.venv
 **/__pycache__
 **/.pytest_cache

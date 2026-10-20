@@ -66,6 +66,41 @@ directory. Keep that file untracked. Nested adapter settings use `__`.
 Invalid adapter selections and device IDs fail configuration. Unavailable
 status preserves capability support. Secrets are not included in descriptions.
 
+## Persistent state ownership
+
+Before opening devices or SQLite stores, startup exclusively reserves every
+enabled inbox, submission and conversation database. A second backend sharing
+any of those files fails immediately with `Persistent state is already owned by
+another backend`; it cannot run restart recovery, prune conversations or start
+workers against the active backend's state. Changing the logical device ID does
+not bypass this guard. Inspection-only configurations with all stores disabled
+create no ownership files.
+
+Locks are derived automatically from the configured database paths; no new env
+settings are needed. For `data/submissions.sqlite3`, the sidecar is
+`data/submissions.sqlite3.owner.lock`. The server uses native OS locks via
+filelock on Linux/macOS/Windows local filesystems and refuses a filesystem that
+cannot provide native locking. It acquires all locks before composition and
+holds them until workers stop and adapters/stores finish closing, including
+failed startup and cancelled shutdown. A killed process releases its kernel
+locks automatically; normal restart then performs the existing conservative
+recovery, preserving unknown submission outcomes without resending.
+
+Sidecars remain after exit. Their existence is not ownership: do not delete them
+to clear a conflict, remove them while a backend runs, or rename/replace active
+state directories. Stop the other backend first. Relative and symbolic-link
+paths are canonicalized; duplicate configured paths are locked once. State
+directories must permit creating/reopening the owner-only sidecars as the
+backend's user (UID/GID 10001 in the container profile).
+
+This is a cooperative guard for shared local state, not a distributed or
+physical-device lease. Separate state volumes/directories, hard-link aliases,
+direct storage-library users, old server versions and unrelated device software
+can bypass it. Network filesystems are outside the supported deployment profile.
+Continue to run exactly one runtime owner per physical cellular device; do not
+scale a device backend across replicas. Independent devices with independent
+state can run in separate processes.
+
 ## API
 
 ```bash

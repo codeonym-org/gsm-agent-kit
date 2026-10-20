@@ -291,6 +291,15 @@ wheels = [
 ]
 
 [[package]]
+name = "filelock"
+version = "4.2.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/28/3893324bcadf8f89b1616637468d766af3f625008c0735bf704fdfa86617/filelock-4.2.4.tar.gz", hash = "sha256:c6d8663535e1650ee430507b4ffbac7b464dd64b7647ea0112a9f406499d163d", size = 652444, upload-time = "2026-10-19T01:57:51.001Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/1b/5e74289a1878e666bb4b65fe5805a04cafcac2aa5f519ef1ead67ef91c56/filelock-4.2.4-py3-none-any.whl", hash = "sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e", size = 162475, upload-time = "2026-10-19T01:57:49.419Z" },
+]
+
+[[package]]
 name = "gsm-agent"
 version = "0.1.0"
 source = { editable = "libs/gsm-agent" }
@@ -474,6 +483,7 @@ source = { editable = "apps/server" }
 dependencies = [
     { name = "dishka" },
     { name = "fastapi" },
+    { name = "filelock" },
     { name = "gsm-agent" },
     { name = "gsm-agent-core" },
     { name = "mediary", extra = ["dishka", "fastapi", "otel"] },
@@ -504,6 +514,7 @@ zte-mf833t = [
 requires-dist = [
     { name = "dishka", specifier = ">=1.10.1" },
     { name = "fastapi", specifier = ">=0.143.0" },
+    { name = "filelock", specifier = ">=4.2.4" },
     { name = "gsm-agent", editable = "libs/gsm-agent" },
     { name = "gsm-agent-core", editable = "libs/core" },
     { name = "gsm-agent-langchain", marker = "extra == 'ai'", editable = "libs/integrations/ai/langchain" },

@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager
 
 from dishka import Provider
 from dishka.integrations.fastapi import setup_dishka
@@ -32,9 +32,23 @@ from gsm_agent_core.domain.sms import InboxReadError
 from gsm_agent_server.api.realtime import router as realtime_router
 from gsm_agent_server.api.routes import router
 from gsm_agent_server.di.container import build_container
+from gsm_agent_server.infra.state_ownership import own_state
 from gsm_agent_server.runtime.inbox import poll_inboxes
 from gsm_agent_server.runtime.replies import process_replies
 from gsm_agent_server.runtime.settings import Settings
+
+
+async def finish_cleanup(task: asyncio.Task[None]) -> None:
+    """Retain ownership until cleanup finishes, even if shutdown is cancelled."""
+    interrupted = False
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            interrupted = True
+    task.result()
+    if interrupted:
+        raise asyncio.CancelledError
 
 
 def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAPI:
@@ -45,7 +59,15 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         polling: asyncio.Task[None] | None = None
         replying: asyncio.Task[None] | None = None
+        ownership = ExitStack()
         try:
+            ownership.enter_context(
+                own_state(
+                    entry.database_path
+                    for entry in (config.inbox, config.submissions, config.assistant)
+                    if entry.enabled
+                )
+            )
             # Compose eagerly: invalid selections fail startup, not the first request.
             await container.get(DeviceDirectory)
             if config.submissions.enabled:
@@ -62,13 +84,20 @@ def create_app(settings: Settings | None = None, *overrides: Provider) -> FastAP
                 polling = asyncio.create_task(poll_inboxes(container, config.inbox), name="inbox-polling")
             yield
         finally:
+
+            async def close_runtime() -> None:
+                try:
+                    tasks = [task for task in (polling, replying) if task is not None]
+                    for task in tasks:
+                        task.cancel()
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                finally:
+                    await container.close()
+
             try:
-                tasks = [task for task in (polling, replying) if task is not None]
-                for task in tasks:
-                    task.cancel()
-                await asyncio.gather(*tasks, return_exceptions=True)
+                await finish_cleanup(asyncio.create_task(close_runtime(), name="runtime-cleanup"))
             finally:
-                await container.close()
+                ownership.close()
 
     app = FastAPI(title="GSM Agent Kit", version="0.1.0", lifespan=lifespan)
     app.state.settings = config
