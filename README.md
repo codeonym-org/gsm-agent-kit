@@ -33,7 +33,8 @@ Incoming SMS ingestion is implemented with source baselines, a SQLite ledger
 and durable events. Outgoing SMS submission has durable intent, per-part attempts
 and bounded plain-text preparation. OpenRouter replies use a durable queue and
 bounded persistent conversations. A capability-aware browser console operates these APIs.
-Remaining integrations and deployment profiles are being built as
+The ZTE assistant also has an adapter-specific container profile and an isolated
+hardware-free deployment smoke test. Remaining integrations are being built as
 [implementation tickets](https://github.com/orgs/codeonym-org/projects/2).
 Each package owns its dependencies, README, source namespace, typing marker and tests.
 
@@ -92,6 +93,16 @@ The SPA uses shadcn/ui and routed overview, inbox, workflow and device screens.
 `pnpm web:dev` also starts its tRPC WebSocket gateway for live inbox and reply
 updates. Proxy settings come from root `.env`; see the web README for defaults.
 pnpm is pinned in root `package.json`; no provider credentials go in the UI.
+
+## Containers
+
+See [container setup and host prerequisites](deploy/compose/README.md) for the
+ZTE MF833T assistant, runtime `.env` settings and persistent storage. Run the
+hardware-free deployment test without provider keys or a device:
+
+```bash
+python scripts/smoke_containers.py
+```
 
 ## Develop
 

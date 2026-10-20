@@ -39,6 +39,12 @@ WebSocket gateway. Reconnect, authorization and SPA navigation are covered. It i
 Browser traces/screenshots are uploaded only on failure using synthetic fixture
 data. Dependabot's npm ecosystem entry manages `pnpm-lock.yaml`.
 
+The required `containers` CI job builds the selected production and smoke image
+targets and runs `scripts/smoke_containers.py`. Its isolated fixture network tests
+SMS ingestion, normalized reply acceptance, recreation with durable state and
+conversation history, dry-run behavior and duplicate prevention. It needs Docker,
+not device hardware or provider secrets, and is included in `ci-ok`.
+
 Dependabot groups weekly GitHub Actions and uv updates. Issue forms and PR
 templates keep real phone numbers, SMS contents, SIM identifiers and credentials
 out of public reports. Secret scanning and push protection are enabled where

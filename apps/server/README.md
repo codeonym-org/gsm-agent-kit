@@ -146,6 +146,8 @@ Run one server process/worker per physical device and ledger. In-process workflo
 locks cover overlapping polls and manual ingestions; they do not coordinate
 multiple owners. Shutdown cancels polling before closing adapters and SQLite.
 
+The [ZTE container profile](../../deploy/compose/README.md) packages the backend,
+SQLite and OpenRouter integration with persistent state and a separate synthetic smoke test.
 For containers, persist the ledger and route the management network to the backend; mounting
 the device's installer media does not expose the HTTP interface.
 

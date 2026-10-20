@@ -1,0 +1,37 @@
+name: gsm-agent-kit
+
+x-runtime: &runtime
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: ["/tmp:size=16m,mode=1777"]
+  stop_grace_period: 20s
+
+services:
+  zte:
+    <<: *runtime
+    profiles: [zte]
+    image: gsm-agent-kit/zte-mf833t:local
+    build:
+      context: ../..
+      dockerfile: deploy/images/server.Dockerfile
+      target: zte-mf833t
+    env_file: ../../.env
+    environment:
+      GSM_DEVICE__ADAPTER: zte-mf833t
+      GSM_DEVICE__ID: ${GSM_DEVICE__ID:-zte-device}
+      GSM_DEVICE__ZTE_MF833T__BASE_URL: ${GSM_DEVICE__ZTE_MF833T__BASE_URL:-http://192.168.0.1}
+      GSM_INBOX__ENABLED: "true"
+      GSM_SUBMISSIONS__ENABLED: "true"
+      GSM_ASSISTANT__ENABLED: "true"
+      GSM_ASSISTANT__DRY_RUN: ${GSM_ASSISTANT__DRY_RUN:-true}
+      GSM_INBOX__DATABASE_PATH: /var/lib/gsm-agent/inbox.sqlite3
+      GSM_SUBMISSIONS__DATABASE_PATH: /var/lib/gsm-agent/submissions.sqlite3
+      GSM_ASSISTANT__DATABASE_PATH: /var/lib/gsm-agent/conversations.sqlite3
+    ports: ["127.0.0.1:${GSM_CONTAINER_PORT:-8000}:8000"]
+    volumes: [zte-state:/var/lib/gsm-agent]
+    restart: unless-stopped
+
+volumes:
+  zte-state:

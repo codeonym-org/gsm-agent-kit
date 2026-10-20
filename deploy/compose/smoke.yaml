@@ -1,0 +1,73 @@
+name: gsm-agent-kit-smoke
+
+x-runtime: &runtime
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: ["/tmp:size=16m,mode=1777"]
+  stop_grace_period: 20s
+
+x-smoke-build: &smoke-build
+  context: ../..
+  dockerfile: deploy/images/server.Dockerfile
+  target: smoke
+
+services:
+  smoke-fixtures:
+    <<: *runtime
+    profiles: [smoke]
+    image: gsm-agent-kit/smoke:local
+    build: *smoke-build
+    command: [uvicorn, fixtures:app, --host, 0.0.0.0, --port, "9000", --no-access-log]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=2).close()"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    volumes: [smoke-fixtures:/var/lib/gsm-agent]
+    networks: [smoke]
+
+  smoke-backend:
+    <<: *runtime
+    profiles: [smoke]
+    image: gsm-agent-kit/smoke:local
+    build: *smoke-build
+    command: [uvicorn, backend:create_smoke_app, --factory, --host, 0.0.0.0, --port, "8000", --no-access-log]
+    environment:
+      GSM_DEVICE__ADAPTER: zte-mf833t
+      GSM_DEVICE__ID: smoke-device
+      GSM_DEVICE__ZTE_MF833T__BASE_URL: http://smoke-fixtures:9000
+      GSM_INBOX__ENABLED: "true"
+      GSM_INBOX__POLL_INTERVAL_SECONDS: "0.2"
+      GSM_INBOX__DATABASE_PATH: /var/lib/gsm-agent/inbox.sqlite3
+      GSM_SUBMISSIONS__ENABLED: "true"
+      GSM_SUBMISSIONS__DATABASE_PATH: /var/lib/gsm-agent/submissions.sqlite3
+      GSM_ASSISTANT__ENABLED: "true"
+      GSM_ASSISTANT__DRY_RUN: ${GSM_SMOKE_DRY_RUN:-false}
+      GSM_ASSISTANT__POLL_INTERVAL_SECONDS: "0.2"
+      GSM_ASSISTANT__DATABASE_PATH: /var/lib/gsm-agent/conversations.sqlite3
+      GSM_API_TOKEN: smoke-only-token
+    depends_on:
+      smoke-fixtures: {condition: service_healthy}
+    volumes: [smoke-state:/var/lib/gsm-agent]
+    networks: [smoke]
+
+  smoke-check:
+    <<: *runtime
+    profiles: [smoke]
+    image: gsm-agent-kit/smoke:local
+    build: *smoke-build
+    command: [python, /smoke/check.py, exercise]
+    healthcheck: {disable: true}
+    depends_on:
+      smoke-backend: {condition: service_healthy}
+    networks: [smoke]
+
+networks:
+  smoke:
+    internal: true
+
+volumes:
+  smoke-state:
+  smoke-fixtures:
