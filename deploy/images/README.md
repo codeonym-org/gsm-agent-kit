@@ -18,6 +18,9 @@ publication or automatic image release is configured.
 
 The allowlisted `.dockerignore` excludes root configuration, local environments,
 device databases, `.v0`, Git metadata, browser dependencies and package tests.
+Local `.owner.lock` sidecars are excluded as well. The server's pure-Python
+filelock dependency uses native OS locking without a host daemon or extra
+container permissions.
 The smoke target adds only isolated deployment fixtures on top of production.
 `python scripts/smoke_containers.py` validates the production image and the
 assembled smoke system. See [Compose usage](../compose/README.md).

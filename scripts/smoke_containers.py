@@ -13,7 +13,9 @@ import importlib.util
 import os
 from pathlib import Path
 from gsm_agent_langchain import LangChainAgent
-for name in ('gsm_agent_server', 'gsm_agent_zte_mf833t', 'gsm_agent_sqlite', 'gsm_agent_langchain'):
+for name in (
+    'gsm_agent_server', 'gsm_agent_zte_mf833t', 'gsm_agent_sqlite', 'gsm_agent_langchain', 'filelock'
+):
     assert importlib.util.find_spec(name) is not None, name
 for name in ('pytest', 'gsm_agent_simulated', 'gsm_agent_serial_at', 'gsm_agent_modemmanager'):
     assert importlib.util.find_spec(name) is None, name
@@ -137,6 +139,7 @@ def main() -> None:
         compose("up", "-d", "--wait", "--wait-timeout", "90", "console")
         compose("run", "--rm", "--no-deps", "smoke-check", "python", "/smoke/check.py", "console")
         compose("run", "--rm", "--no-deps", "smoke-check", "python", "/smoke/check.py", "exercise")
+        compose("run", "--rm", "--no-deps", "zte", "python", "/smoke/ownership.py")
         compose("down")
         compose("up", "-d", "--wait", "--wait-timeout", "90", "console")
         compose("run", "--rm", "--no-deps", "smoke-check", "python", "/smoke/check.py", "persist")
@@ -154,7 +157,9 @@ def main() -> None:
             "manual-proxy",
             dry_run=True,
         )
-        print("PASS: production console/realtime, SMS flow, restart persistence, dry-run and deduplication")
+        print(
+            "PASS: production console/realtime, SMS flow, exclusive state, restart, dry-run and deduplication"
+        )
     except (subprocess.CalledProcessError, KeyboardInterrupt):
         # These logs belong only to this uniquely named synthetic fixture project.
         subprocess.run([*command, "logs", "--tail", "80"], cwd=ROOT, env=env, check=False)

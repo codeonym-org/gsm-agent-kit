@@ -38,6 +38,10 @@ hardware-free deployment smoke test. Remaining integrations are being built as
 [implementation tickets](https://github.com/orgs/codeonym-org/projects/2).
 Each package owns its dependencies, README, source namespace, typing marker and tests.
 
+The server reserves enabled SQLite ledgers with native OS locks before device
+access or restart recovery, preventing competing backends from sharing active
+local state. See [ownership and deployment limits](apps/server/README.md#persistent-state-ownership).
+
 ## Run the first slice
 
 ```bash

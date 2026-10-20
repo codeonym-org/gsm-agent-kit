@@ -80,6 +80,16 @@ needs outbound access to the device management address and OpenRouter. Exactly
 one backend owns a physical device and its state: do not scale this service or
 run another application against that device concurrently.
 
+The backend now enforces exclusive ownership of each enabled SQLite ledger in
+the shared local state volume before device access, migration/recovery or
+worker startup. A second container sharing any ledger refuses startup. Native
+OS locks release automatically on shutdown or process death; `.owner.lock`
+sidecars intentionally remain and must not be deleted to bypass a conflict.
+Restore the volume with the same backend UID/GID so it can reopen those files.
+Separate volumes, hard-link aliases, network filesystems and unrelated software
+are outside this guard; the single physical-device owner rule still applies.
+See [state ownership](../../apps/server/README.md#persistent-state-ownership).
+
 ## Production console
 
 Add the console overlay to the ZTE profile. Both files belong to the same
@@ -164,7 +174,8 @@ notices and JSON API authorization/errors. They exercise a same-origin tRPC
 subscription through Caddy and the bundled gateway to Python, reject wrong-token
 and cross-origin WebSocket clients, then perform the SMS checks through Caddy's
 API proxy. The checks establish the empty inbox baseline, inject an incoming message,
-observe one normalized accepted reply, recreate the backend and fixture
+observe one normalized accepted reply, verify a competing backend cannot acquire
+the shared state volume, recreate the backend and fixture
 containers, verify durable inbox/jobs/submissions, send a second message with
 restored conversation history, switch to dry-run, and verify generation without
 another automatic submission. A final authenticated manual POST through the
