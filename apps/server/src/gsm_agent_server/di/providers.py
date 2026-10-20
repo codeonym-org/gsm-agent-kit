@@ -5,6 +5,7 @@ from gsm_agent.application.inbox import InboxDisabledError, InboxPolicy, Ingesti
 from gsm_agent.application.ports.devices import DeviceDirectory
 from gsm_agent.application.ports.inbox import InboxStore
 from gsm_agent.application.ports.replies import ReplyStore
+from gsm_agent.application.ports.runtime import RuntimeStatusReader
 from gsm_agent.application.ports.submissions import SubmissionStore
 from gsm_agent.application.queries.balance import BalancePolicy
 from gsm_agent.application.queries.devices import DeviceQueryPolicy
@@ -18,11 +19,22 @@ from gsm_agent_core.ports import CellularDevice
 from gsm_agent_server.infra.devices import ConfiguredDevices
 from gsm_agent_server.infra.realtime import ChangeFeed, ObservedInbox, ObservedReplies, ObservedSubmissions
 from gsm_agent_server.infra.replies import DisabledAgent, DisabledReplyStore
+from gsm_agent_server.infra.runtime import RuntimeMonitor
 from gsm_agent_server.runtime.settings import DeviceSettings, Settings
 
 
 class DeviceProvider(Provider):
     scope = Scope.APP
+
+    @provide
+    def runtime_monitor(self, settings: Settings) -> RuntimeMonitor:
+        return RuntimeMonitor(
+            inbox_enabled=settings.inbox.enabled, replies_enabled=settings.assistant.enabled
+        )
+
+    @provide
+    def runtime_status_reader(self, monitor: RuntimeMonitor) -> RuntimeStatusReader:
+        return monitor
 
     @provide
     def change_feed(self) -> ChangeFeed:

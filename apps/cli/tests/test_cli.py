@@ -15,6 +15,7 @@ REQUEST_ID = "242b8428-257d-4eec-bb2c-30ffb37db901"
     "argv,path,payload,params",
     [
         (["health"], "/health", {"status": "ok"}, {}),
+        (["runtime"], "/api/runtime", {"workers": []}, {}),
         (["adapters"], "/api/adapters", [{"capabilities": ["device.status.read"]}], {}),
         (["devices"], "/api/devices", [{"device_id": "demo-device"}], {}),
         (["device", "demo-device"], "/api/devices/demo-device", {"observation": None}, {}),

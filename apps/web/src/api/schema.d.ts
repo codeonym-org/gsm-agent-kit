@@ -21,6 +21,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Runtime Status
+         * @description Read recorded process-local worker observations without device probes. Worker success is separate from reply-job and SMS delivery outcomes.
+         */
+        get: operations["runtime_status_api_runtime_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/devices": {
         parameters: {
             query?: never;
@@ -416,6 +436,21 @@ export interface components {
          * @enum {string}
          */
         ReplyState: "queued" | "generating" | "prepared" | "submitting" | "completed" | "ignored" | "dry_run" | "failed" | "interrupted";
+        /** RuntimeStatus */
+        RuntimeStatus: {
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Workers */
+            workers: components["schemas"]["WorkerStatus"][];
+        };
         /** SendSmsRequest */
         SendSmsRequest: {
             /**
@@ -549,6 +584,49 @@ export interface components {
          * @enum {string}
          */
         VerificationKind: "protocol_fixture" | "device_verification";
+        /**
+         * WorkerId
+         * @enum {string}
+         */
+        WorkerId: "inbox" | "replies";
+        WorkerIssue: components["schemas"]["DeviceReadIssue"] | ("operation_failed" | "unexpected_exit");
+        /**
+         * WorkerState
+         * @enum {string}
+         */
+        WorkerState: "disabled" | "starting" | "running" | "waiting" | "degraded" | "failed" | "stopped";
+        /** WorkerStatus */
+        WorkerStatus: {
+            worker_id: components["schemas"]["WorkerId"];
+            state: components["schemas"]["WorkerState"];
+            /**
+             * Iterations Started
+             * @default 0
+             */
+            iterations_started: number;
+            /**
+             * Iterations Succeeded
+             * @default 0
+             */
+            iterations_succeeded: number;
+            /**
+             * Iterations Failed
+             * @default 0
+             */
+            iterations_failed: number;
+            /**
+             * Consecutive Failures
+             * @default 0
+             */
+            consecutive_failures: number;
+            /** Last Attempt At */
+            last_attempt_at?: string | null;
+            /** Last Success At */
+            last_success_at?: string | null;
+            /** Last Failure At */
+            last_failure_at?: string | null;
+            last_issue?: components["schemas"]["WorkerIssue"] | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -574,6 +652,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdapterResponse"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    runtime_status_api_runtime_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeStatus"];
                 };
             };
             /** @description Unauthorized */

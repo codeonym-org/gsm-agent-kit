@@ -45,6 +45,8 @@ The API is published only on `127.0.0.1:8000` by default. `/docs` describes it.
 `GET /health` is an unauthenticated process/lifespan health check: it reports
 `adapter_profile`, but does not prove network registration, an available SIM,
 worker progress or successful AI/device I/O. With your bearer token, inspect
+`GET /api/runtime` for recorded worker states, iteration counts and sanitized
+failure codes (reset on restart). This query performs no probes. Inspect
 `GET /api/devices/zte-device/status` and
 `GET /api/devices/zte-device/assistant` for device availability, assistant mode
 and job counts; `/assistant/jobs` reports individual failures. Substitute your

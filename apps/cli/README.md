@@ -58,6 +58,7 @@ characters from messages or carrier responses. No files are written.
 
 ```bash
 uv run --no-sync gsm-agent health
+uv run --no-sync gsm-agent runtime
 uv run --no-sync gsm-agent adapters
 uv run --no-sync gsm-agent devices
 uv run --no-sync gsm-agent device zte-device
@@ -75,7 +76,11 @@ limits 1–200 and nonnegative offsets. Empty inventory/inbox/jobs return `[]`.
 Device IDs, UUIDs, pagination and configuration are validated before HTTP access.
 
 `health` observes the backend process; it does not establish SIM readiness or
-provider connectivity. Device output retains model adapter identity, declared
+provider connectivity. `runtime` reads recorded background-worker observations,
+including iteration counts, timestamps and sanitized issue codes, without probing
+devices. Counts reset on restart; successful worker iterations include idle work
+and do not prove successful AI replies or SMS delivery. See the
+[worker states](../server/README.md#background-worker-status). Device output retains model adapter identity, declared
 capability support and observed availability as separate data. `assistant`
 returns automatic-reply enablement, dry-run mode and job counts; `jobs` returns
 job metadata. Inbox and submission queries read durable state without triggering

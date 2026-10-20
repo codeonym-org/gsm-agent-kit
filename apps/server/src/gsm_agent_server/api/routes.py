@@ -11,8 +11,10 @@ from gsm_agent.application.queries.balance import ConsultBalance
 from gsm_agent.application.queries.devices import GetDevice, GetDeviceStatus, ListAdapters, ListDevices
 from gsm_agent.application.queries.inbox import ListStoredMessages
 from gsm_agent.application.queries.replies import AssistantStatus, GetAssistantStatus, ListReplyJobs
+from gsm_agent.application.queries.runtime import GetRuntimeStatus
 from gsm_agent.application.queries.submissions import GetSubmission
 from gsm_agent.application.replies import ReplyJobStatus
+from gsm_agent.application.runtime import RuntimeStatus
 from gsm_agent_core.domain.balance import BalanceObservation
 from gsm_agent_core.domain.devices import CellularDeviceId
 from gsm_agent_core.domain.submission import SmsDestination
@@ -55,6 +57,19 @@ router = APIRouter(
 @router.get("/adapters", response_model=list[AdapterResponse])
 async def adapters(queries: FromDishka[QuerySender]) -> list[AdapterResponse]:
     return [AdapterResponse.from_domain(adapter) for adapter in await queries.send(ListAdapters())]
+
+
+@router.get(
+    "/runtime",
+    response_model=RuntimeStatus,
+    description=(
+        "Read recorded process-local worker observations without device probes. "
+        "Worker success is separate from reply-job and SMS delivery outcomes."
+    ),
+)
+async def runtime_status(response: Response, queries: FromDishka[QuerySender]) -> RuntimeStatus:
+    response.headers["Cache-Control"] = "no-store"
+    return await queries.send(GetRuntimeStatus())
 
 
 @router.get("/devices", response_model=list[DeviceResponse], responses={504: {"model": ErrorResponse}})

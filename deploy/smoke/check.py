@@ -51,6 +51,12 @@ def check_submissions(jobs):
 
 def main(phase):
     assert request("/health")["adapter_profile"] == "zte-mf833t"
+    runtime = request("/api/runtime")
+    assert runtime["started_at"] and runtime["observed_at"]
+    assert {worker["worker_id"] for worker in runtime["workers"]} == {"inbox", "replies"}
+    assert all(worker["state"] in {"running", "waiting"} for worker in runtime["workers"])
+    assert all(worker["iterations_started"] >= 1 for worker in runtime["workers"])
+    assert all(worker["iterations_failed"] == 0 for worker in runtime["workers"])
     assert request(DEVICE + "/status")["availability"] == "ready"
     status = request(DEVICE + "/assistant")
     assert status["auto_reply"] and status["dry_run"] == (phase in {"dry-run", "manual-proxy"})
