@@ -13,7 +13,7 @@ dependencies = [
     'gsm-agent',
     "gsm-agent-core",
     "mediary[dishka,fastapi,otel]>=0.4.0",
-    "pydantic-settings>=2.15.0",
+    "pydantic-settings>=2.16.1",
     "uvicorn>=0.54.0",
     "websockets>=16.1.1",
 ]
